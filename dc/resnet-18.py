@@ -10,6 +10,7 @@ import random
 import requests
 from io import BytesIO
 from torch.utils.data import Subset
+import itertools
 
 # Import images
 elsa_data = load_dataset("elsaEU/ELSA_D3", split="train", streaming=True)
@@ -17,7 +18,7 @@ elsa_data_test = load_dataset("elsaEU/ELSA_D3", split="validation", streaming=Tr
 
 # Resize images for the resnet
 transform = transforms.Compose([
-    transforms.Resize((224, 224)),  # ResNet expects 224x224
+    transforms.Resize((224, 224)),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
@@ -42,15 +43,13 @@ def collate_fake_real(batch):
     images = []
     labels_ = []
 
-    for example in batch:  # example è già un singolo dict
+    for example in batch:
         if random.random() < 0.5:  # testa/croce
-            # Croce: prendiamo image_gen0 (fake)
-            img = example["image_gen0"]  # già un'immagine PIL
+            img = example["image_gen0"]
             if img is not None:
                 images.append(transform(img))
                 labels_.append(0)
         else:
-            # Testa: scarichiamo immagine reale da url
             url = example["url"]
             try:
                 response = requests.get(url, timeout=5)
@@ -59,7 +58,6 @@ def collate_fake_real(batch):
                 labels_.append(1)
                 print("OK download")
             except Exception as e:
-                # fallback: se non riesce a scaricare, prendiamo image_gen0
                 print(f"NOT SO OK download: {e}")
                 img = example["image_gen0"]  # già PIL Image
                 if img is not None:
@@ -70,10 +68,43 @@ def collate_fake_real(batch):
     return torch.stack(images), torch.tensor(labels_)
 
 
-# Create a DataLoader that applies the transform on-the-fly
-train_loader = DataLoader(Subset(elsa_data, range(64)), batch_size=32, collate_fn=collate_fake_real)
+def collate_(batch):
+    images = []
+    labels_ = []
+    for item in batch:
+        if random.random() < 0.5:
+            try:
+                url = item["url"]
+                response = requests.get(url, timeout=2)
+                img = Image.open(BytesIO(response.content)).convert("RGB")
+                images.append(transform(img))
+                labels_.append(1)
+                print("OK download")
+            except Exception as e:
+                img = item["image_gen0"]
+                if isinstance(img, bytes):
+                    img = Image.open(BytesIO(img)).convert("RGB")
+                else:
+                    img = img.convert("RGB")
+                if img is not None:
+                    images.append(transform(img))
+                    labels_.append(0)
+                print(f"NOT SO OK download: {e}")
+        else:
+            img = item["image_gen0"]
+            if isinstance(img, bytes):
+                img = Image.open(BytesIO(img)).convert("RGB")
+            else:
+                img = img.convert("RGB")
+            if img is not None:
+                images.append(transform(img))
+                labels_.append(0)
+    return torch.stack(images), torch.tensor(labels_)
+
+
+train_loader = DataLoader(Subset(elsa_data, range(64)), batch_size=32, collate_fn=collate_)
 print("Train_loader complete")
-test_loader = DataLoader(Subset(elsa_data_test, range(64)), batch_size=32, collate_fn=collate_fake_real)
+test_loader = DataLoader(Subset(elsa_data_test, range(64)), batch_size=32, collate_fn=collate_)
 print("Test_loader complete")
 
 print(train_loader)
