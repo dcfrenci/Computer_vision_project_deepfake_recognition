@@ -33,7 +33,6 @@ transform = transforms.Compose([
 def process_example(example_pr):
     img = None
     label = None
-
     if random.random() < 0.5:
         try:
             url = example_pr["url"]
@@ -57,7 +56,6 @@ def process_example(example_pr):
 
     if img:
         img = transform(img)
-
     return {'image': img, 'label': label}
 
 
@@ -68,7 +66,7 @@ elsa_data_test = load_dataset("elsaEU/ELSA_D3", split="validation", streaming=Tr
 # Sample a subset of examples
 subset_train = []
 for i, example in enumerate(elsa_data):
-    if i >= 64:
+    if i >= 256:
         break
     subset_train.append(process_example(example))
 
@@ -151,9 +149,11 @@ def evaluate_model(model, dataloader, criterion, device):
 
 
 # --- Main Training Loop ---
-num_epochs = 5
+num_epochs = 10
 for epoch in range(num_epochs):
     train_loss = train_epoch(model, train_loader, criterion, optimizer, device)
     test_loss, test_accuracy = evaluate_model(model, test_loader, criterion, device)
     print(
         f'Epoch [{epoch + 1}/{num_epochs}], Training Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}, Accuracy: {test_accuracy:.2f}%')
+
+torch.save(model, "resnet-18-weight.pth")
