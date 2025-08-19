@@ -1,4 +1,5 @@
 import random
+import helpers
 import requests
 from tqdm import tqdm
 from io import BytesIO
@@ -63,6 +64,8 @@ def process_example(example_pr):
 
 
 def dataset_handler():
+    helpers.print_section("DATASET")
+
     # Load datasets in streaming mode
     elsa_data = load_dataset("elsaEU/ELSA_D3", split="train", streaming=True)
     elsa_data_test = load_dataset("elsaEU/ELSA_D3", split="validation", streaming=True)
