@@ -1,29 +1,9 @@
+import helpers
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torchvision.models import resnet18, ResNet18_Weights
 from pathlib import Path
-import dataset_handler
-
-
-train_loader, test_loader = dataset_handler.dataset_handler()
-
-# --- Model, Loss, and Optimizer Definition ---
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"Using device: {device}")
-
-model = resnet18() if Path("resnet-18-weight.pth").exists() else resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
-num_feature = model.fc.in_features
-model.fc = nn.Linear(num_feature, 2)
-model = model.to(device)
-if Path("resnet-18-weight.pth").exists():
-    model.load_state_dict(torch.load("resnet-18-weight.pth", weights_only=True))
-    print(f"Resnet loaded with pretrained weights")
-else:
-    print(f"Resnet loaded with IMAGENET1K_V1 weights")
-
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
 
 
 # --- Training and Evaluation Functions ---
@@ -71,13 +51,32 @@ def evaluate_model(model, dataloader, criterion, device):
     return epoch_loss, accuracy
 
 
-# --- Main Training Loop ---
-num_epochs = 10
-for epoch in range(num_epochs):
-    train_loss = train_epoch(model, train_loader, criterion, optimizer, device)
-    test_loss, test_accuracy = evaluate_model(model, test_loader, criterion, device)
-    print(
-        f'Epoch [{epoch + 1}/{num_epochs}], Training Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}, Accuracy: {test_accuracy:.2f}%')
+def resnet_handler(train_loader, test_loader):
+    helpers.print_section("RESNET 18")
 
-# Save just the weight and bias of all layer
-torch.save(model.state_dict(), "resnet-18-weight.pth")
+    # --- Model, Loss, and Optimizer Definition ---
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
+
+    model = resnet18() if Path("dc/resnet_18_weight.pth").exists() else resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
+    num_feature = model.fc.in_features
+    model.fc = nn.Linear(num_feature, 2)
+    model = model.to(device)
+    if Path("dc/resnet_18_weight.pth").exists():
+        model.load_state_dict(torch.load("dc/resnet_18_weight.pth", weights_only=True))
+        print(f"Resnet loaded with pretrained weights")
+    else:
+        print(f"Resnet loaded with IMAGENET1K_V1 weights")
+
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+    # --- Main Training Loop ---
+    num_epochs = 10
+    for epoch in range(num_epochs):
+        train_loss = train_epoch(model, train_loader, criterion, optimizer, device)
+        test_loss, test_accuracy = evaluate_model(model, test_loader, criterion, device)
+        print(f'Epoch [{epoch + 1}/{num_epochs}], Training Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}, Accuracy: {test_accuracy:.2f}%')
+
+    # Save just the weight and bias of all layer
+    torch.save(model.state_dict(), "dc/resnet_18_weight.pth")
