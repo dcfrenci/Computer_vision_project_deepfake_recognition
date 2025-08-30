@@ -1,5 +1,7 @@
 import dataset_handler
 from dc import resnet_18
+from matte import clip
+from simo import frequency
 
 
 def main():
@@ -10,8 +12,10 @@ def main():
     resnet_18.resnet_handler(train_loader, test_loader)
 
     # Clip
+    clip.clip_handler()
 
     # Frequency
+    frequency.frequency_handler()
 
 
 if __name__ == "__main__":
