@@ -63,7 +63,7 @@ def resnet_handler(train_loader, test_loader):
     model.fc = nn.Linear(num_feature, 2)
     model = model.to(device)
     if Path("dc/resnet_18_weight.pth").exists():
-        model.load_state_dict(torch.load("dc/resnet_18_weight.pth", weights_only=True))
+        model.load_state_dict(torch.load("dc/resnet_18_weight.pth", weights_only=True, map_location=device))
         print(f"Resnet loaded with pretrained weights")
     else:
         print(f"Resnet loaded with IMAGENET1K_V1 weights")
