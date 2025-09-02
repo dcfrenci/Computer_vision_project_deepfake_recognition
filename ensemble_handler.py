@@ -31,7 +31,7 @@ def ensemble_handler(model_probs_list, test_loader):
     combined_probs = np.average(model_probs_list, axis=0, weights=opt_weights)
     final_bin_prev = np.argmax(combined_probs, axis=1)
     ensemble_accuracy = accuracy_score(labels, final_bin_prev)
-    ensemble_log_loss = log_loss(labels, combined_probs)
+    ensemble_log_loss = log_loss(labels, combined_probs / np.sum(combined_probs, axis=1, keepdims=True))
 
     with open(r'ensemble_weights.pkl', 'wb') as file:
         # noinspection PyTypeChecker

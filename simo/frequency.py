@@ -100,6 +100,8 @@ def evaluate_model_wavelet(model, dataloader, criterion, device):
     running_loss = 0.0
     correct, total = 0, 0
 
+    all_outputs = []
+
     with torch.no_grad():
         for batch in dataloader:
             inputs = batch['image'].to(device)
@@ -115,9 +117,11 @@ def evaluate_model_wavelet(model, dataloader, criterion, device):
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
+            all_outputs.extend(torch.softmax(outputs, dim=1).cpu().numpy())
+
     epoch_loss = running_loss / len(dataloader.dataset)
     accuracy = 100 * correct / total
-    return epoch_loss, accuracy
+    return epoch_loss, accuracy, all_outputs
 
 
 # =========================
@@ -149,9 +153,10 @@ def frequency_handler(train_loader, test_loader):
 
     # training
     num_epochs = 10
+    outputs = []
     for epoch in range(num_epochs):
         train_loss = train_epoch_wavelet(model, train_loader, criterion, optimizer, device)
-        test_loss, test_accuracy = evaluate_model_wavelet(model, test_loader, criterion, device)
+        test_loss, test_accuracy, outputs = evaluate_model_wavelet(model, test_loader, criterion, device)
         print(f"Epoch [{epoch+1}/{num_epochs}], "
               f"Train Loss: {train_loss:.4f}, "
               f"Test Loss: {test_loss:.4f}, "
@@ -159,4 +164,4 @@ def frequency_handler(train_loader, test_loader):
 
     # salva i pesi
     torch.save(model.state_dict(), weight_path)
-    return 0
+    return outputs

@@ -24,7 +24,7 @@ def training(train_loader, test_loader):
     # Frequency
     out_frequency = frequency.frequency_handler(train_loader, test_loader)
     # Ensemble
-    ensemble_handler.ensemble_handler([out_resnet, out_clip], test_loader)
+    ensemble_handler.ensemble_handler([out_resnet, out_clip, out_frequency], test_loader)
 
     helpers.print_section("END TRAINING")
 
