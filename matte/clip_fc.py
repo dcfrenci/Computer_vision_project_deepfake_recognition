@@ -8,6 +8,8 @@ from torch.utils.data import DataLoader
 import helpers
 from pathlib import Path
 
+
+
 class DeepfakeClassifier(nn.Module):
         def __init__(self, clip_model):
             super().__init__()
@@ -20,6 +22,8 @@ class DeepfakeClassifier(nn.Module):
             logits = self.head(features.float())
 
             return logits
+
+
 
 def clip_handler(train_loader, test_loader):
     helpers.print_section("CLIP")
@@ -75,6 +79,7 @@ def train_epoch(model, dataloader, criterion, optimizer, device):
 
     epoch_loss = running_loss / len(dataloader.dataset)
     return epoch_loss
+
 
 
 def evaluate_model(model, data_loader, criterion, device):
