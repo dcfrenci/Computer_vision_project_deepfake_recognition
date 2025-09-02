@@ -41,7 +41,7 @@ def ensemble_handler(model_probs_list, test_loader):
         f"Optimal weight: {opt_weights}\nEnsemble accuracy: {ensemble_accuracy:.4f}\nEnsemble Log Loss: {ensemble_log_loss:.4f}")
 
 
-def ensemble_evaluation(models, data_loader):
+def ensemble_results(models, data_loader):
     """
     Given the models, generate a final weighted prediction for the set
     :param models:

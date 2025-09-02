@@ -77,13 +77,16 @@ def resnet_handler(train_loader, test_loader):
 
     # --- Main Training Loop ---
     num_epochs = 10
+    outputs = []
     for epoch in range(num_epochs):
         train_loss = train_epoch(model, train_loader, criterion, optimizer, device)
-        test_loss, test_accuracy, _ = evaluate_model(model, test_loader, criterion, device)
+        test_loss, test_accuracy, outputs = evaluate_model(model, test_loader, criterion, device)
         print(f'Epoch [{epoch + 1}/{num_epochs}], Training Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}, Accuracy: {test_accuracy:.2f}%')
 
     # Save just the weight and bias of all layer
     torch.save(model.state_dict(), "dc/resnet_18_weight.pth")
+
+    return outputs
 
 
 def resnet_results(data_loader):

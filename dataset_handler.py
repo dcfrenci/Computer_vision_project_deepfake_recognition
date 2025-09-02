@@ -63,29 +63,25 @@ def process_example(example_pr):
     return {'image': img, 'label': label}
 
 
-def dataset_handler():
+def dataset_handler(num_train_examples, num_test_examples, batch_size):
     helpers.print_section("DATASET")
+
+    print(f"Sampling {num_train_examples} for training and {num_test_examples} for testing")
 
     # Load datasets in streaming mode
     elsa_data = load_dataset("elsaEU/ELSA_D3", split="train", streaming=True)
     elsa_data_test = load_dataset("elsaEU/ELSA_D3", split="validation", streaming=True)
 
-    NUM_TRAIN_EXAMPLES = 256
-    NUM_TEST_EXAMPLES = 64
-    BATCH_SIZE = 32
-
-    print(f"Sampling {NUM_TRAIN_EXAMPLES} for training and {NUM_TEST_EXAMPLES} for testing")
-
     # Sample a subset of examples
     subset_train = []
-    for i, example in enumerate(tqdm(elsa_data, total=NUM_TRAIN_EXAMPLES, desc="Training Data")):
-        if i >= NUM_TRAIN_EXAMPLES:
+    for i, example in enumerate(tqdm(elsa_data, total=num_train_examples, desc="Training Data")):
+        if i >= num_train_examples:
             break
         subset_train.append(process_example(example))
 
     subset_test = []
-    for i, example in enumerate(tqdm(elsa_data_test, total=NUM_TEST_EXAMPLES, desc="Test Data    ")):
-        if i >= NUM_TEST_EXAMPLES:
+    for i, example in enumerate(tqdm(elsa_data_test, total=num_test_examples, desc="Test Data    ")):
+        if i >= num_test_examples:
             break
         subset_test.append(process_example(example))
 
@@ -96,7 +92,7 @@ def dataset_handler():
     test_dataset = CustomListDataset(subset_test)
 
     # Create the DataLoader using the Dataset instances
-    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE)
-    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE)
-    print(f"Train and test loader ready (batch size = {BATCH_SIZE})")
+    train_loader = DataLoader(train_dataset, batch_size=batch_size)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size)
+    print(f"Train and test loader ready (batch size = {batch_size})")
     return train_loader, test_loader

@@ -9,20 +9,17 @@ import helpers
 from pathlib import Path
 
 
-
 class DeepfakeClassifier(nn.Module):
-        def __init__(self, clip_model):
-            super().__init__()
-            self.clip = clip_model
-            self.head = nn.Linear(512, 2)
-        
-        def forward(self, image):
+    def __init__(self, clip_model):
+        super().__init__()
+        self.clip = clip_model
+        self.head = nn.Linear(512, 2)
 
-            features = self.clip.encode_image(image)
-            logits = self.head(features.float())
+    def forward(self, image):
+        features = self.clip.encode_image(image)
+        logits = self.head(features.float())
 
-            return logits
-
+        return logits
 
 
 def clip_handler(train_loader, test_loader):
@@ -35,30 +32,31 @@ def clip_handler(train_loader, test_loader):
 
     for param in clip_model.parameters():
         param.requires_grad = False
-    
 
     model = DeepfakeClassifier(clip_model).to(device)
 
     if Path("matte/fc_layer_weight.pth").exists():
-        model.head.load_state_dict(torch.load("matte/fc_layer_weight.pth", map_location=device))
+        model.head.load_state_dict(torch.load("matte/fc_layer_weight.pth", weights_only=True, map_location=device))
         print(f"head layer loaded with pretrained weights")
     else:
         print(f"head layer loaded without pretrained weights")
-    
+
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.head.parameters(), lr=1e-3)
 
-
     # --- Main Training Loop ---
     num_epochs = 10
+    outputs = []
     for epoch in range(num_epochs):
         train_loss = train_epoch(model, train_loader, criterion, optimizer, device)
-        test_loss, test_accuracy, _ = evaluate_model(model, test_loader, criterion, device)
-        print(f'Epoch [{epoch + 1}/{num_epochs}], Training Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}, Accuracy: {test_accuracy:.2f}%')
+        test_loss, test_accuracy, outputs = evaluate_model(model, test_loader, criterion, device)
+        print(
+            f'Epoch [{epoch + 1}/{num_epochs}], Training Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}, Accuracy: {test_accuracy:.2f}%')
 
     # Save just the weight and bias of all layer
     torch.save(model.head.state_dict(), "matte/fc_layer_weight.pth")
 
+    return outputs
 
 
 def train_epoch(model, dataloader, criterion, optimizer, device):
@@ -79,7 +77,6 @@ def train_epoch(model, dataloader, criterion, optimizer, device):
 
     epoch_loss = running_loss / len(dataloader.dataset)
     return epoch_loss
-
 
 
 def evaluate_model(model, data_loader, criterion, device):
@@ -110,7 +107,6 @@ def evaluate_model(model, data_loader, criterion, device):
     return epoch_loss, accuracy, all_outputs
 
 
-
 def clip_fc_results(data_loader):
     helpers.print_section("CLIP")
 
@@ -121,7 +117,6 @@ def clip_fc_results(data_loader):
 
     for param in clip_model.parameters():
         param.requires_grad = False
-    
 
     model = DeepfakeClassifier(clip_model).to(device)
 
@@ -130,14 +125,10 @@ def clip_fc_results(data_loader):
         print(f"head layer loaded with pretrained weights")
     else:
         print(f"head layer loaded without pretrained weights")
-    
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.head.parameters(), lr=1e-3)
 
+    criterion = nn.CrossEntropyLoss()
 
     # --- Main Training Loop ---
-    num_epochs = 10
-    
     epoch_loss, accuracy, outputs = evaluate_model(model, data_loader, criterion, device)
     print(f"Test Loss: {epoch_loss:.4f}, Accuracy: {accuracy:.2f}%")
 
