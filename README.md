@@ -5,3 +5,5 @@
 [vision guide](https://arxiv.org/html/2502.10682v1)
 
 [resnet18](https://github.com/aandyw/StuffFromScratch/tree/main/ResNet)
+
+[ensemble](https://www.kaggle.com/code/daisukelab/example-of-weighted-ensemble#Example-of-weighted-ensemble)
