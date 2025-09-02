@@ -1,6 +1,6 @@
-import numpy as np
 from scipy import optimize
 from sklearn.metrics import log_loss, accuracy_score
+import numpy as np
 import pickle
 import torch
 
@@ -12,7 +12,7 @@ def loss_function(weights, probs_list, labels):
 
 def ensemble_handler(model_probs_list, test_loader):
     """
-    Given a list of model it optimize their weights for a final prediction
+    Given a list of model, the function optimize their weights for a final prediction
     :param model_probs_list:
     :param test_loader:
     """
@@ -63,10 +63,10 @@ def ensemble_evaluation(models, data_loader):
 
     labels = get_all_labels(data_loader=data_loader)
 
-    final_preds_proba = np.average(model_probs_list, axis=0, weights=optimal_weights)
-    final_preds = np.argmax(final_preds_proba, axis=1)
-    ensemble_accuracy = accuracy_score(labels, final_preds)
-    ensemble_log_loss = log_loss(labels, final_preds_proba)
+    combined_probs = np.average(model_probs_list, axis=0, weights=optimal_weights)
+    final_bin_prev = np.argmax(combined_probs, axis=1)
+    ensemble_accuracy = accuracy_score(labels, final_bin_prev)
+    ensemble_log_loss = log_loss(labels, combined_probs)
 
     print(f"Ensemble accuracy: {ensemble_accuracy}\nEnsemble log loss: {ensemble_log_loss}")
 
@@ -74,7 +74,7 @@ def ensemble_evaluation(models, data_loader):
 def get_all_labels(data_loader):
     """
     Extract all the label from the DataLoader (Args)
-    :return:np.array: An array containing all the label of DataLoader.
+    :return: np.Array containing all the label of DataLoader.
     """
     all_labels = []
     for batch in data_loader:
