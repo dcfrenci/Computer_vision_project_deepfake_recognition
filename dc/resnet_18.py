@@ -27,7 +27,7 @@ def train_epoch(model, dataloader, criterion, optimizer, device):
     return epoch_loss
 
 
-def evaluate_model(model, dataloader, criterion, device):
+def evaluate_model(model, data_loader, criterion, device):
     model.eval()
     running_loss = 0.0
     correct = 0
@@ -36,7 +36,7 @@ def evaluate_model(model, dataloader, criterion, device):
     all_outputs = []
 
     with torch.no_grad():
-        for batch in dataloader:
+        for batch in data_loader:
             inputs = batch['image'].to(device)
             labels = batch['label'].to(device)
 
@@ -50,7 +50,7 @@ def evaluate_model(model, dataloader, criterion, device):
 
             all_outputs.extend(torch.softmax(outputs, dim=1).cpu().numpy())
 
-    epoch_loss = running_loss / len(dataloader.dataset)
+    epoch_loss = running_loss / len(data_loader.dataset)
     accuracy = 100 * correct / total
     return epoch_loss, accuracy, all_outputs
 
@@ -77,13 +77,37 @@ def resnet_handler(train_loader, test_loader):
 
     # --- Main Training Loop ---
     num_epochs = 10
-    prob_outputs = None
     for epoch in range(num_epochs):
         train_loss = train_epoch(model, train_loader, criterion, optimizer, device)
-        test_loss, test_accuracy, prob_outputs = evaluate_model(model, test_loader, criterion, device)
+        test_loss, test_accuracy, _ = evaluate_model(model, test_loader, criterion, device)
         print(f'Epoch [{epoch + 1}/{num_epochs}], Training Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}, Accuracy: {test_accuracy:.2f}%')
 
     # Save just the weight and bias of all layer
     torch.save(model.state_dict(), "dc/resnet_18_weight.pth")
 
-    return prob_outputs
+
+def resnet_results(data_loader):
+    helpers.print_section("RESNET 18")
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
+
+    model = resnet18()
+    num_feature = model.fc.in_features
+    model.fc = nn.Linear(num_feature, 2)
+    weights_path = Path("dc/resnet_18_weight.pth")
+    if weights_path.exists():
+        model.load_state_dict(torch.load(weights_path, map_location=device))
+        print("Resnet loaded with saved weights")
+    else:
+        print("Error: Saved weights not found. Please train the model first.")
+        return None
+
+    model.to(device)
+    model.eval()
+    criterion = nn.CrossEntropyLoss()
+
+    epoch_loss, accuracy, outputs = evaluate_model(model, data_loader, criterion, device)
+    print(f"Test Loss: {epoch_loss:.4f}, Accuracy: {accuracy:.2f}%")
+
+    return outputs
