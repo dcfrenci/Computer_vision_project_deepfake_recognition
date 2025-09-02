@@ -6,19 +6,9 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 import helpers
+from pathlib import Path
 
-
-def clip_handler(train_loader, test_loader):
-    helpers.print_section("CLIP")
-
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-
-    clip_model, preprocess = clip.load("ViT-B/32", device=device)
-
-    for param in clip_model.parameters():
-        param.requires_grad = False
-    
-    class DeepfakeClassifier(nn.Module):
+class DeepfakeClassifier(nn.Module):
         def __init__(self, clip_model):
             super().__init__()
             self.clip = clip_model
@@ -31,20 +21,39 @@ def clip_handler(train_loader, test_loader):
 
             return logits
 
+def clip_handler(train_loader, test_loader):
+    helpers.print_section("CLIP")
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"Using device: {device}")
+
+    clip_model, preprocess = clip.load("ViT-B/32", device=device)
+
+    for param in clip_model.parameters():
+        param.requires_grad = False
+    
+
     model = DeepfakeClassifier(clip_model).to(device)
 
+    if Path("matte/fc_layer_weight.pth").exists():
+        model.head.load_state_dict(torch.load("matte/fc_layer_weight.pth", map_location=device))
+        print(f"head layer loaded with pretrained weights")
+    else:
+        print(f"head layer loaded without pretrained weights")
+    
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.head.parameters(), lr=1e-3)
+
 
     # --- Main Training Loop ---
     num_epochs = 10
     for epoch in range(num_epochs):
         train_loss = train_epoch(model, train_loader, criterion, optimizer, device)
-        test_loss, test_accuracy = evaluate_model(model, test_loader, criterion, device)
+        test_loss, test_accuracy, _ = evaluate_model(model, test_loader, criterion, device)
         print(f'Epoch [{epoch + 1}/{num_epochs}], Training Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}, Accuracy: {test_accuracy:.2f}%')
 
     # Save just the weight and bias of all layer
-    torch.save(model.state_dict(), "matte/fc_layer_weight.pth")
+    torch.save(model.head.state_dict(), "matte/fc_layer_weight.pth")
 
 
 
@@ -68,14 +77,16 @@ def train_epoch(model, dataloader, criterion, optimizer, device):
     return epoch_loss
 
 
-def evaluate_model(model, dataloader, criterion, device):
+def evaluate_model(model, data_loader, criterion, device):
     model.eval()
     running_loss = 0.0
     correct = 0
     total = 0
 
+    all_outputs = []
+
     with torch.no_grad():
-        for batch in dataloader:
+        for batch in data_loader:
             inputs = batch['image'].to(device)
             labels = batch['label'].to(device)
 
@@ -87,6 +98,42 @@ def evaluate_model(model, dataloader, criterion, device):
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
-    epoch_loss = running_loss / len(dataloader.dataset)
+            all_outputs.extend(torch.softmax(outputs, dim=1).cpu().numpy())
+
+    epoch_loss = running_loss / len(data_loader.dataset)
     accuracy = 100 * correct / total
-    return epoch_loss, accuracy
+    return epoch_loss, accuracy, all_outputs
+
+
+
+def clip_fc_results(data_loader):
+    helpers.print_section("CLIP")
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"Using device: {device}")
+
+    clip_model, preprocess = clip.load("ViT-B/32", device=device)
+
+    for param in clip_model.parameters():
+        param.requires_grad = False
+    
+
+    model = DeepfakeClassifier(clip_model).to(device)
+
+    if Path("matte/fc_layer_weight.pth").exists():
+        model.head.load_state_dict(torch.load("matte/fc_layer_weight.pth", map_location=device))
+        print(f"head layer loaded with pretrained weights")
+    else:
+        print(f"head layer loaded without pretrained weights")
+    
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.head.parameters(), lr=1e-3)
+
+
+    # --- Main Training Loop ---
+    num_epochs = 10
+    
+    epoch_loss, accuracy, outputs = evaluate_model(model, data_loader, criterion, device)
+    print(f"Test Loss: {epoch_loss:.4f}, Accuracy: {accuracy:.2f}%")
+
+    return outputs
