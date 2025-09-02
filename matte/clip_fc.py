@@ -7,8 +7,6 @@ from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 import helpers
 
-def ciao_metodo():
-    print("ciao")
 
 def clip_handler(train_loader, test_loader):
     helpers.print_section("CLIP")
