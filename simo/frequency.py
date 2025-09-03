@@ -42,7 +42,7 @@ def apply_wavelet(batch_images):
 
 
 # =========================
-# ResNet18 modificata a 12 canali
+# ResNet18 modificata a 12canali
 # =========================
 def build_resnet18_12ch(weight_path: Path):
     if weight_path.exists():
