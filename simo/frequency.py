@@ -17,21 +17,21 @@ def apply_wavelet(batch_images):
     batch_wavelet = []
 
     for img in batch_images:  # img: [3,H,W]
-        img_np = img.permute(1, 2, 0).cpu().numpy().astype(np.float32)
+        img_np = img.permute(1, 2, 0).cpu().numpy().astype(np.float32) #da [C,H,W] a [H,W,C] server per PyWavelets
         comps = []
 
         for c in range(3):  # R,G,B
             cA, (cH, cV, cD) = pywt.dwt2(img_np[:, :, c], "haar")
 
             for comp in [cA, cH, cV, cD]:
-                comp_resized = cv2.resize(comp, (224, 224))
+                comp_resized = cv2.resize(comp, (224, 224)) #ogni componente welvet ha dim 1/2 rispetto all'imm originale, li riporto alla dim originale
                 comps.append(comp_resized)
 
         # shape: [12,H,W]
-        wavelet_img = np.stack(comps, axis=0)
+        wavelet_img = np.stack(comps, axis=0) #unisco tutte le 3x4 immagini in un tensore
         wavelet_tensor = torch.from_numpy(wavelet_img).float()
 
-        # Normalizzazione tipo ImageNet (ripetuta per ogni gruppo di 3 canali)
+        #Normalizzazione tipo ImageNet (ripetuta per ogni gruppo di 3 canali)
         mean = [0.485, 0.456, 0.406] * 4
         std = [0.229, 0.224, 0.225] * 4
         wavelet_tensor = transforms.Normalize(mean=mean, std=std)(wavelet_tensor)
@@ -44,32 +44,39 @@ def apply_wavelet(batch_images):
 # =========================
 # ResNet18 modificata a 12 canali
 # =========================
-def build_resnet18_12ch(pretrained=True):
-    model = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1 if pretrained else None)
-
-    # salva conv1 originale
-    old_conv = model.conv1
-
-    # nuovo conv1 con 12 canali
-    model.conv1 = nn.Conv2d(12, old_conv.out_channels,
-                            kernel_size=old_conv.kernel_size,
-                            stride=old_conv.stride,
-                            padding=old_conv.padding,
-                            bias=old_conv.bias)
-
-    if pretrained:
-        # inizializza i pesi copiando i 3 canali originali su tutti i 12
-        with torch.no_grad():
+def build_resnet18_12ch(weight_path: Path):
+    if weight_path.exists():
+        model = resnet18()
+        old_conv = model.conv1 #salvo riferimento al layer originale del resnet18 con 3 canali
+        model.conv1 = nn.Conv2d(12, old_conv.out_channels,
+                        kernel_size=old_conv.kernel_size,
+                        stride=old_conv.stride,
+                        padding=old_conv.padding,
+                        bias=old_conv.bias)
+        # carica tutti i pesi tranne fc in modo da evitare missmatch con le 1000 classi di imagenet
+        state_dict = torch.load(weight_path, map_location="cpu", weights_only=True)
+        state_dict.pop('fc.weight', None)
+        state_dict.pop('fc.bias', None)
+        model.load_state_dict(state_dict, strict=False)
+        print("ResNet18 caricata con pesi salvati")
+    else:
+        # Altrimenti parti dai pesi ImageNet
+        model = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
+        old_conv = model.conv1
+        model.conv1 = nn.Conv2d(12, old_conv.out_channels,
+                                kernel_size=old_conv.kernel_size,
+                                stride=old_conv.stride,
+                                padding=old_conv.padding,
+                                bias=old_conv.bias)
+        with torch.no_grad(): #non calcolare i gradienti per le operazioni dentro il blocco.stiamo modificando i pesi direttamente non stiamo facendo trainig
+            # replica i pesi dei 3 canali sui 12
             model.conv1.weight[:, :3, :, :] = old_conv.weight
             for i in range(1, 4):
-                model.conv1.weight[:, 3*i:3*(i+1), :, :] = old_conv.weight
-
+                model.conv1.weight[:, 3 * i:3 * (i + 1), :, :] = old_conv.weight
+        print("ResNet18 caricata con pesi ImageNet adattati a 12 canali")
     return model
 
 
-# =========================
-# Training per un'epoca
-# =========================
 def train_epoch_wavelet(model, dataloader, criterion, optimizer, device):
     model.train()
     running_loss = 0.0
@@ -92,9 +99,6 @@ def train_epoch_wavelet(model, dataloader, criterion, optimizer, device):
     return epoch_loss
 
 
-# =========================
-# Valutazione del modello
-# =========================
 def evaluate_model_wavelet(model, dataloader, criterion, device):
     model.eval()
     running_loss = 0.0
@@ -109,7 +113,6 @@ def evaluate_model_wavelet(model, dataloader, criterion, device):
 
             inputs = apply_wavelet(inputs).to(device)  # [B,12,224,224]
             outputs = model(inputs)
-
             loss = criterion(outputs, labels)
             running_loss += loss.item() * inputs.size(0)
 
@@ -117,36 +120,25 @@ def evaluate_model_wavelet(model, dataloader, criterion, device):
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
-            all_outputs.extend(torch.softmax(outputs, dim=1).cpu().numpy())
+            all_outputs.extend(torch.softmax(outputs,dim=1).cpu().numpy())
 
     epoch_loss = running_loss / len(dataloader.dataset)
     accuracy = 100 * correct / total
-    return epoch_loss, accuracy, all_outputs
+    return epoch_loss, accuracy,all_outputs
 
 
-# =========================
-# Pipeline completa
-# =========================
 def frequency_handler(train_loader, test_loader):
     helpers.print_section("FREQUENCY DECOMPOSITION + RESNET 18 (12ch)")
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    # costruisci il modello 12ch
-    model = build_resnet18_12ch(pretrained=True)
+    weight_path = Path("simo/frequency_resnet_18_weight.pth")
+
+    model = build_resnet18_12ch(weight_path)
+
     num_feature = model.fc.in_features
     model.fc = nn.Linear(num_feature, 2)
     model = model.to(device)
-
-    # carica pesi se già salvati
-    weight_path = Path("simo/frequency_resnet_18_weight.pth")
-    if weight_path.exists():
-        state_dict = torch.load(weight_path, map_location=device, weights_only=True)
-        model.load_state_dict(state_dict)
-        print("ResNet18 caricata con pesi salvati")
-    else:
-        print("ResNet18 caricata con pesi ImageNet adattati a 12 canali")
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
@@ -154,9 +146,10 @@ def frequency_handler(train_loader, test_loader):
     # training
     num_epochs = 10
     outputs = []
+
     for epoch in range(num_epochs):
         train_loss = train_epoch_wavelet(model, train_loader, criterion, optimizer, device)
-        test_loss, test_accuracy, outputs = evaluate_model_wavelet(model, test_loader, criterion, device)
+        test_loss, test_accuracy,outputs = evaluate_model_wavelet(model, test_loader, criterion, device)
         print(f"Epoch [{epoch+1}/{num_epochs}], "
               f"Train Loss: {train_loss:.4f}, "
               f"Test Loss: {test_loss:.4f}, "
@@ -164,4 +157,23 @@ def frequency_handler(train_loader, test_loader):
 
     # salva i pesi
     torch.save(model.state_dict(), weight_path)
+    return outputs
+
+
+def frequency_results(data_loader):
+    helpers.print_section("FREQUENCY + RESNET 18")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
+    weight_path = Path("simo/frequency_resnet_18_weight.pth")
+    if weight_path.exists():
+        model = build_resnet18_12ch(weight_path)
+    else:
+        print("Error: Saved weights not found. Please train the model first.")
+        return None
+    num_feature = model.fc.in_features
+    model.fc = nn.Linear(num_feature, 2)
+    model.to(device)
+    criterion = nn.CrossEntropyLoss()
+    epoch_loss, accuracy, outputs = evaluate_model_wavelet (model, data_loader, criterion, device)
+    print(f"Test Loss: {epoch_loss:.4f}, Accuracy: {accuracy:.2f}%")
     return outputs
