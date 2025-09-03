@@ -127,7 +127,7 @@ def evaluate_model_wavelet(model, dataloader, criterion, device):
     return epoch_loss, accuracy,all_outputs
 
 
-def frequency_handler(train_loader, test_loader):
+def frequency_handler(train_loader, test_loader,num_epochs):
     helpers.print_section("FREQUENCY DECOMPOSITION + RESNET 18 (12ch)")
     if torch.cuda.is_available():
         device = "cuda"
@@ -149,7 +149,6 @@ def frequency_handler(train_loader, test_loader):
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
     # training
-    num_epochs = 10
     outputs = []
 
     for epoch in range(num_epochs):

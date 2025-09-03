@@ -55,7 +55,7 @@ def evaluate_model(model, data_loader, criterion, device):
     return epoch_loss, accuracy, all_outputs
 
 
-def resnet_handler(train_loader, test_loader):
+def resnet_handler(train_loader, test_loader,num_epochs):
     helpers.print_section("RESNET 18")
 
     # --- Model, Loss, and Optimizer Definition ---
@@ -81,7 +81,6 @@ def resnet_handler(train_loader, test_loader):
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
     # --- Main Training Loop ---
-    num_epochs = 10
     outputs = []
     for epoch in range(num_epochs):
         train_loss = train_epoch(model, train_loader, criterion, optimizer, device)

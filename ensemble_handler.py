@@ -4,12 +4,16 @@ import numpy as np
 import pickle
 import torch
 
-
-def loss_function(weights, probs_list, labels):
+def loss_function(weights, probs_list, labels, alpha=0.01):
     weighted_probs = np.average(probs_list, axis=0, weights=weights)
     sum_of_probs = np.sum(weighted_probs, axis=1, keepdims=True)
     normalized_probs = weighted_probs / sum_of_probs
-    return log_loss(labels, normalized_probs)
+    base_loss = log_loss(labels, normalized_probs)
+
+    # Penalizzazione: spinge i pesi verso distribuzione uniforme
+    reg = alpha * np.sum((weights - 1/len(weights))**2)
+    return base_loss + reg
+
 
 
 def ensemble_handler(model_probs_list, test_loader):

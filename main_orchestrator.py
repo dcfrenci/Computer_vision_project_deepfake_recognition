@@ -11,18 +11,19 @@ def main():
     train_loader, test_loader = dataset_handler.dataset_handler(num_train_examples=256,
                                                                 num_test_examples=64,
                                                                 batch_size=32)
-    training(train_loader, test_loader)
+    num_epochs = 15
+    training(train_loader, test_loader,num_epochs)
 
 
-def training(train_loader, test_loader):
+def training(train_loader, test_loader,num_epochs):
     helpers.print_section("TRAINING")
 
     # Resnet18
-    out_resnet = resnet_18.resnet_handler(train_loader, test_loader)
+    out_resnet = resnet_18.resnet_handler(train_loader, test_loader,num_epochs)
     # Clip
-    out_clip = clip_fc.clip_handler(train_loader, test_loader)
+    out_clip = clip_fc.clip_handler(train_loader, test_loader,num_epochs)
     # Frequency
-    out_frequency = frequency.frequency_handler(train_loader, test_loader)
+    out_frequency = frequency.frequency_handler(train_loader, test_loader,num_epochs)
     # Ensemble
     ensemble_handler.ensemble_handler([out_resnet, out_clip, out_frequency], test_loader)
 
@@ -35,9 +36,9 @@ def results(test_loader):
     # Resnet18
     out_resnet = resnet_18.resnet_results(test_loader)
     # Clip
-    out_clip = clip_fc.clip_results(test_loader)
+    out_clip = clip_fc.clip_fc_results(test_loader)
     # Frequency
-    # frequency.frequency_results(test_loader)
+    frequency.frequency_results(test_loader)
     # Ensemble
     ensemble_handler.ensemble_results([out_resnet, out_clip], test_loader)
 

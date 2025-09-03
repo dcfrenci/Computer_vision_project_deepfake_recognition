@@ -22,7 +22,7 @@ class DeepfakeClassifier(nn.Module):
         return logits
 
 
-def clip_handler(train_loader, test_loader):
+def clip_handler(train_loader, test_loader,num_epochs):
     helpers.print_section("CLIP")
 
     if torch.cuda.is_available():
@@ -50,7 +50,6 @@ def clip_handler(train_loader, test_loader):
     optimizer = optim.Adam(model.head.parameters(), lr=1e-3)
 
     # --- Main Training Loop ---
-    num_epochs = 10
     outputs = []
     for epoch in range(num_epochs):
         train_loss = train_epoch(model, train_loader, criterion, optimizer, device)
