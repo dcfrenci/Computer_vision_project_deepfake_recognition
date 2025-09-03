@@ -25,7 +25,12 @@ class DeepfakeClassifier(nn.Module):
 def clip_handler(train_loader, test_loader):
     helpers.print_section("CLIP")
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif torch.backends.mps.is_available():
+        device = "mps"
+    else:
+        device = "cpu"
     print(f"Using device: {device}")
 
     clip_model, preprocess = clip.load("ViT-B/32", device=device)
@@ -110,7 +115,12 @@ def evaluate_model(model, data_loader, criterion, device):
 def clip_fc_results(data_loader):
     helpers.print_section("CLIP")
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif torch.backends.mps.is_available():
+        device = "mps"
+    else:
+        device = "cpu"
     print(f"Using device: {device}")
 
     clip_model, preprocess = clip.load("ViT-B/32", device=device)

@@ -129,7 +129,12 @@ def evaluate_model_wavelet(model, dataloader, criterion, device):
 
 def frequency_handler(train_loader, test_loader):
     helpers.print_section("FREQUENCY DECOMPOSITION + RESNET 18 (12ch)")
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif torch.backends.mps.is_available():
+        device = "mps"
+    else:
+        device = "cpu"
     print(f"Using device: {device}")
 
     weight_path = Path("simo/frequency_resnet_18_weight.pth")
@@ -162,7 +167,12 @@ def frequency_handler(train_loader, test_loader):
 
 def frequency_results(data_loader):
     helpers.print_section("FREQUENCY + RESNET 18")
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif torch.backends.mps.is_available():
+        device = "mps"
+    else:
+        device = "cpu"
     print(f"Using device: {device}")
     weight_path = Path("simo/frequency_resnet_18_weight.pth")
     if weight_path.exists():

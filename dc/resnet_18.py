@@ -59,7 +59,12 @@ def resnet_handler(train_loader, test_loader):
     helpers.print_section("RESNET 18")
 
     # --- Model, Loss, and Optimizer Definition ---
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif torch.backends.mps.is_available():
+        device = "mps"
+    else:
+        device = "cpu"
     print(f"Using device: {device}")
 
     model = resnet18() if Path("dc/resnet_18_weight.pth").exists() else resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
@@ -91,8 +96,12 @@ def resnet_handler(train_loader, test_loader):
 
 def resnet_results(data_loader):
     helpers.print_section("RESNET 18")
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif torch.backends.mps.is_available():
+        device = "mps"
+    else:
+        device = "cpu"
     print(f"Using device: {device}")
 
     model = resnet18()
