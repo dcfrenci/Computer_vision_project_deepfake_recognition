@@ -7,7 +7,9 @@ import torch
 
 def loss_function(weights, probs_list, labels):
     weighted_probs = np.average(probs_list, axis=0, weights=weights)
-    return log_loss(labels, weighted_probs)
+    sum_of_probs = np.sum(weighted_probs, axis=1, keepdims=True)
+    normalized_probs = weighted_probs / sum_of_probs
+    return log_loss(labels, normalized_probs)
 
 
 def ensemble_handler(model_probs_list, test_loader):
@@ -29,9 +31,12 @@ def ensemble_handler(model_probs_list, test_loader):
     )['x']
 
     combined_probs = np.average(model_probs_list, axis=0, weights=opt_weights)
-    final_bin_prev = np.argmax(combined_probs, axis=1)
+    sum_of_probs = np.sum(combined_probs, axis=1, keepdims=True)
+    normalized_probs = combined_probs / sum_of_probs
+
+    final_bin_prev = np.argmax(normalized_probs, axis=1)
     ensemble_accuracy = accuracy_score(labels, final_bin_prev)
-    ensemble_log_loss = log_loss(labels, combined_probs / np.sum(combined_probs, axis=1, keepdims=True))
+    ensemble_log_loss = log_loss(labels, normalized_probs)
 
     with open(r'ensemble_weights.pkl', 'wb') as file:
         # noinspection PyTypeChecker
