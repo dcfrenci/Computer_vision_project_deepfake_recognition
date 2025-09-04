@@ -9,11 +9,7 @@ def loss_function(weights, probs_list, labels, alpha=0.01):
     weighted_probs = np.average(probs_list, axis=0, weights=weights)
     sum_of_probs = np.sum(weighted_probs, axis=1, keepdims=True)
     normalized_probs = weighted_probs / sum_of_probs
-    base_loss = log_loss(labels, normalized_probs)
-
-    # Penalizzazione: spinge i pesi verso distribuzione uniforme
-    reg = alpha * np.sum((weights - 1 / len(weights)) ** 2)
-    return base_loss + reg
+    return log_loss(labels, normalized_probs)
 
 
 def ensemble_handler(model_probs_list, test_loader):
@@ -30,7 +26,7 @@ def ensemble_handler(model_probs_list, test_loader):
         args=(model_probs_list, labels),
         constraints=({'type': 'eq', 'fun': lambda w: 1 - sum(w)}),
         method='SLSQP',
-        bounds=[(0.0, 1.0)] * num_models,
+        bounds=[(0.05, 1.0)] * num_models,
         options={'ftol': 1e-10},
     )['x']
 
@@ -62,6 +58,7 @@ def ensemble_results(models, data_loader):
         device = "mps"
     else:
         device = "cpu"
+
     # Load weights
     try:
         with open('ensemble_weights.pkl', 'rb') as file:
@@ -78,9 +75,12 @@ def ensemble_results(models, data_loader):
     labels = get_all_labels(data_loader=data_loader)
 
     combined_probs = np.average(model_probs_list, axis=0, weights=optimal_weights)
-    final_bin_prev = np.argmax(combined_probs, axis=1)
+    sum_of_probs = np.sum(combined_probs, axis=1, keepdims=True)
+    normalized_probs = combined_probs / sum_of_probs
+
+    final_bin_prev = np.argmax(normalized_probs, axis=1)
     ensemble_accuracy = accuracy_score(labels, final_bin_prev)
-    ensemble_log_loss = log_loss(labels, combined_probs)
+    ensemble_log_loss = log_loss(labels, normalized_probs)
 
     print(f"Ensemble accuracy: {ensemble_accuracy}\nEnsemble log loss: {ensemble_log_loss}")
 

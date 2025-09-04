@@ -8,9 +8,9 @@ from simo import frequency
 
 def main():
     # Dataset
-    train_loader, test_loader = dataset_handler.dataset_handler(num_train_examples=256,
-                                                                num_test_examples=64,
-                                                                batch_size=32)
+    train_loader, test_loader = dataset_handler.dataset_handler(num_train_examples=2048,
+                                                                num_test_examples=500,
+                                                                batch_size=64)
     training(train_loader, test_loader, num_epochs=15)
 
 
