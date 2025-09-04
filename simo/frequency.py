@@ -8,6 +8,7 @@ import numpy as np
 from torchvision import transforms
 import pywt
 import cv2
+import timm
 
 
 # =========================
@@ -42,26 +43,23 @@ def apply_wavelet(batch_images):
 
 
 # =========================
-# ResNet18 modificata a 12canali
+# Xception modificata a 12canali
 # =========================
-def build_resnet18_12ch(weight_path: Path):
+def build_xception_12ch(weight_path: Path):
     if weight_path.exists():
-        model = resnet18()
+        model = timm.create_model("legacy_xception",pretrained=False,num_classes=2)
         old_conv = model.conv1 #salvo riferimento al layer originale del resnet18 con 3 canali
         model.conv1 = nn.Conv2d(12, old_conv.out_channels,
                         kernel_size=old_conv.kernel_size,
                         stride=old_conv.stride,
                         padding=old_conv.padding,
                         bias=old_conv.bias)
-        # carica tutti i pesi tranne fc in modo da evitare missmatch con le 1000 classi di imagenet
         state_dict = torch.load(weight_path, map_location="cpu", weights_only=True)
-        state_dict.pop('fc.weight', None)
-        state_dict.pop('fc.bias', None)
         model.load_state_dict(state_dict, strict=False)
-        print("ResNet18 caricata con pesi salvati")
+        print("Xception caricata con pesi salvati")
     else:
-        # Altrimenti parti dai pesi ImageNet
-        model = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
+        # Altrimenti parti dai pesi ImageNet e sostituisce la testa con 2 classi
+        model = timm.create_model("legacy_xception",pretrained=True,num_classes=2)
         old_conv = model.conv1
         model.conv1 = nn.Conv2d(12, old_conv.out_channels,
                                 kernel_size=old_conv.kernel_size,
@@ -73,7 +71,7 @@ def build_resnet18_12ch(weight_path: Path):
             model.conv1.weight[:, :3, :, :] = old_conv.weight
             for i in range(1, 4):
                 model.conv1.weight[:, 3 * i:3 * (i + 1), :, :] = old_conv.weight
-        print("ResNet18 caricata con pesi ImageNet adattati a 12 canali")
+        print("Xception caricata con pesi ImageNet adattati a 12 canali")
     return model
 
 
@@ -128,7 +126,7 @@ def evaluate_model_wavelet(model, dataloader, criterion, device):
 
 
 def frequency_handler(train_loader, test_loader,num_epochs):
-    helpers.print_section("FREQUENCY DECOMPOSITION + RESNET 18 (12ch)")
+    helpers.print_section("FREQUENCY DECOMPOSITION + Xception (12ch)")
     if torch.cuda.is_available():
         device = "cuda"
     elif torch.backends.mps.is_available():
@@ -137,12 +135,9 @@ def frequency_handler(train_loader, test_loader,num_epochs):
         device = "cpu"
     print(f"Using device: {device}")
 
-    weight_path = Path("simo/frequency_resnet_18_weight.pth")
+    weight_path = Path("simo/frequency_Xception_weight.pth")
 
-    model = build_resnet18_12ch(weight_path)
-
-    num_feature = model.fc.in_features
-    model.fc = nn.Linear(num_feature, 2)
+    model = build_xception_12ch(weight_path)
     model = model.to(device)
 
     criterion = nn.CrossEntropyLoss()
@@ -165,7 +160,7 @@ def frequency_handler(train_loader, test_loader,num_epochs):
 
 
 def frequency_results(data_loader):
-    helpers.print_section("FREQUENCY + RESNET 18")
+    helpers.print_section("FREQUENCY + Xception 18")
     if torch.cuda.is_available():
         device = "cuda"
     elif torch.backends.mps.is_available():
@@ -173,9 +168,9 @@ def frequency_results(data_loader):
     else:
         device = "cpu"
     print(f"Using device: {device}")
-    weight_path = Path("simo/frequency_resnet_18_weight.pth")
+    weight_path = Path("simo/frequency_Xception_weight.pth")
     if weight_path.exists():
-        model = build_resnet18_12ch(weight_path)
+        model = build_xception_12ch(weight_path)
     else:
         print("Error: Saved weights not found. Please train the model first.")
         return None
