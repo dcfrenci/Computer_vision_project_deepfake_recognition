@@ -1,6 +1,7 @@
 import dataset_handler
 import ensemble_handler
 import helpers
+import trasformations
 from dc import resnet_18
 from matte import clip_fc
 from simo import frequency
@@ -31,6 +32,10 @@ def training(train_loader, test_loader,num_epochs):
 
 def results(test_loader):
     helpers.print_section("RESULTS")
+
+    # apply random trasformations on the training set
+    #dis-comment if you want to test trasformations effect on the results
+    #test_loader = trasformations.apply_transformation(test_loader)
 
     # Resnet18
     out_resnet = resnet_18.resnet_results(test_loader)
