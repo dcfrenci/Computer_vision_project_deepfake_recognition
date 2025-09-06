@@ -46,10 +46,10 @@ def ensemble_handler(model_probs_list, test_loader):
         f"Optimal weight: {opt_weights}\nEnsemble accuracy: {ensemble_accuracy:.4f}\nEnsemble Log Loss: {ensemble_log_loss:.4f}")
 
 
-def ensemble_results(models, data_loader):
+def ensemble_results(model_probs_list, data_loader):
     """
     Given the models, generate a final weighted prediction for the set
-    :param models:
+    :param model_probs_list:
     :param data_loader:
     """
     if torch.cuda.is_available():
@@ -66,11 +66,6 @@ def ensemble_results(models, data_loader):
     except FileNotFoundError:
         print(f"Error while loading ensemble weight")
         return None
-
-    model_probs_list = []
-    for model in models:
-        probs = get_model_probs(model, data_loader, device)
-        model_probs_list.append(probs)
 
     labels = get_all_labels(data_loader=data_loader)
 

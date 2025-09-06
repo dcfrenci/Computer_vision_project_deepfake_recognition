@@ -8,16 +8,17 @@ from simo import frequency
 
 
 def main():
-    # Dataset
+    # training(num_epochs=15)
+
+    results()
+
+
+def training(num_epochs):
     train_loader, test_loader = dataset_handler.dataset_handler(num_train_examples=256,
                                                                 num_test_examples=64,
                                                                 batch_size=32)
-    training(train_loader, test_loader, num_epochs=15)
 
-
-def training(train_loader, test_loader,num_epochs):
     helpers.print_section("TRAINING")
-
     # Resnet18
     out_resnet = resnet_18.resnet_handler(train_loader, test_loader, num_epochs)
     # Clip
@@ -30,7 +31,8 @@ def training(train_loader, test_loader,num_epochs):
     helpers.print_section("END TRAINING")
 
 
-def results(test_loader):
+def results():
+    test_loader = dataset_handler.dataset_results(num_test_examples=256, batch_size=32)
     helpers.print_section("RESULTS")
 
     # apply random trasformations on the training set

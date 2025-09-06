@@ -108,7 +108,7 @@ def resnet_results(data_loader):
     model.fc = nn.Linear(num_feature, 2)
     weights_path = Path("dc/resnet_18_weight.pth")
     if weights_path.exists():
-        model.load_state_dict(torch.load(weights_path, map_location=device))
+        model.load_state_dict(torch.load(weights_path, weights_only=True, map_location=device))
         print("Resnet loaded with saved weights")
     else:
         print("Error: Saved weights not found. Please train the model first.")

@@ -96,3 +96,22 @@ def dataset_handler(num_train_examples, num_test_examples, batch_size):
     test_loader = DataLoader(test_dataset, batch_size=batch_size)
     print(f"Train and test loader ready (batch size = {batch_size})")
     return train_loader, test_loader
+
+
+def dataset_results(num_test_examples, batch_size):
+    helpers.print_section("DATASET")
+    print(f"Sampling {num_test_examples} for testing")
+
+    elsa_data_test = load_dataset("elsaEU/ELSA_D3", split="validation", streaming=True)
+
+    subset_test = []
+    for i, example in enumerate(tqdm(elsa_data_test, total=num_test_examples, desc="Test Data    ")):
+        if i >= num_test_examples:
+            break
+        subset_test.append(process_example(example))
+
+    print(f"Sampling completed")
+    test_dataset = CustomListDataset(subset_test)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size)
+    print(f"Test loader ready (batch size = {batch_size})")
+    return test_loader

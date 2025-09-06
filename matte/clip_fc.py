@@ -130,7 +130,7 @@ def clip_fc_results(data_loader):
     model = DeepfakeClassifier(clip_model).to(device)
 
     if Path("matte/fc_layer_weight.pth").exists():
-        model.head.load_state_dict(torch.load("matte/fc_layer_weight.pth", map_location=device))
+        model.head.load_state_dict(torch.load("matte/fc_layer_weight.pth", weights_only=True, map_location=device))
         print(f"head layer loaded with pretrained weights")
     else:
         print(f"head layer loaded without pretrained weights")
