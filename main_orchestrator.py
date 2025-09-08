@@ -35,9 +35,9 @@ def results():
     test_loader = dataset_handler.dataset_results(num_test_examples=256, batch_size=32)
     helpers.print_section("RESULTS")
 
-    # apply random trasformations on the training set
-    #dis-comment if you want to test trasformations effect on the results
-    #test_loader = trasformations.apply_transformation(test_loader)
+    # apply random transformations on the training set
+    # dis-comment if you want to test transformations effect on the results
+    test_loader_modified = trasformations.apply_transformation(test_loader)
 
     # Resnet18
     out_resnet = resnet_18.resnet_results(test_loader)
@@ -47,6 +47,14 @@ def results():
     out_frequency = frequency.frequency_results(test_loader)
     # Ensemble
     ensemble_handler.ensemble_results([out_resnet, out_clip, out_frequency], test_loader)
+
+    out_resnet = resnet_18.resnet_results(test_loader_modified)
+    # Clip
+    out_clip = clip_fc.clip_fc_results(test_loader_modified)
+    # Frequency
+    out_frequency = frequency.frequency_results(test_loader_modified)
+    # Ensemble
+    ensemble_handler.ensemble_results([out_resnet, out_clip, out_frequency], test_loader_modified)
 
     helpers.print_section("END RESULTS")
 

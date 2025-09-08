@@ -1,14 +1,15 @@
-import helpers
+from pathlib import Path
+
+import cv2
+import numpy as np
+import pywt
+import timm
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torchvision.models import resnet18, ResNet18_Weights
-from pathlib import Path
-import numpy as np
 from torchvision import transforms
-import pywt
-import cv2
-import timm
+
+import helpers
 
 
 # =========================
@@ -18,18 +19,19 @@ def apply_wavelet(batch_images):
     batch_wavelet = []
 
     for img in batch_images:  # img: [3,H,W]
-        img_np = img.permute(1, 2, 0).cpu().numpy().astype(np.float32) #da [C,H,W] a [H,W,C] server per PyWavelets
+        img_np = img.permute(1, 2, 0).cpu().numpy().astype(np.float32)  #da [C,H,W] a [H,W,C] server per PyWavelets
         comps = []
 
         for c in range(3):  # R,G,B
             cA, (cH, cV, cD) = pywt.dwt2(img_np[:, :, c], "haar")
 
             for comp in [cA, cH, cV, cD]:
-                comp_resized = cv2.resize(comp, (224, 224)) #ogni componente welvet ha dim 1/2 rispetto all'imm originale, li riporto alla dim originale
+                comp_resized = cv2.resize(comp, (
+                224, 224))  #ogni componente welvet ha dim 1/2 rispetto all'imm originale, li riporto alla dim originale
                 comps.append(comp_resized)
 
         # shape: [12,H,W]
-        wavelet_img = np.stack(comps, axis=0) #unisco tutte le 3x4 immagini in un tensore
+        wavelet_img = np.stack(comps, axis=0)  #unisco tutte le 3x4 immagini in un tensore
         wavelet_tensor = torch.from_numpy(wavelet_img).float()
 
         #Normalizzazione tipo ImageNet (ripetuta per ogni gruppo di 3 canali)
@@ -47,26 +49,26 @@ def apply_wavelet(batch_images):
 # =========================
 def build_xception_12ch(weight_path: Path):
     if weight_path.exists():
-        model = timm.create_model("legacy_xception",pretrained=False,num_classes=2)
-        old_conv = model.conv1 #salvo riferimento al layer originale del resnet18 con 3 canali
+        model = timm.create_model("legacy_xception", pretrained=False, num_classes=2)
+        old_conv = model.conv1  #salvo riferimento al layer originale del resnet18 con 3 canali
         model.conv1 = nn.Conv2d(12, old_conv.out_channels,
-                        kernel_size=old_conv.kernel_size,
-                        stride=old_conv.stride,
-                        padding=old_conv.padding,
-                        bias=old_conv.bias)
+                                kernel_size=old_conv.kernel_size,
+                                stride=old_conv.stride,
+                                padding=old_conv.padding,
+                                bias=old_conv.bias)
         state_dict = torch.load(weight_path, map_location="cpu", weights_only=True)
         model.load_state_dict(state_dict, strict=False)
         print("Xception caricata con pesi salvati")
     else:
         # Altrimenti parti dai pesi ImageNet e sostituisce la testa con 2 classi
-        model = timm.create_model("legacy_xception",pretrained=True,num_classes=2)
+        model = timm.create_model("legacy_xception", pretrained=True, num_classes=2)
         old_conv = model.conv1
         model.conv1 = nn.Conv2d(12, old_conv.out_channels,
                                 kernel_size=old_conv.kernel_size,
                                 stride=old_conv.stride,
                                 padding=old_conv.padding,
                                 bias=old_conv.bias)
-        with torch.no_grad(): #non calcolare i gradienti per le operazioni dentro il blocco.stiamo modificando i pesi direttamente non stiamo facendo trainig
+        with torch.no_grad():  #non calcolare i gradienti per le operazioni dentro il blocco.stiamo modificando i pesi direttamente non stiamo facendo trainig
             # replica i pesi dei 3 canali sui 12
             model.conv1.weight[:, :3, :, :] = old_conv.weight
             for i in range(1, 4):
@@ -118,14 +120,14 @@ def evaluate_model_wavelet(model, dataloader, criterion, device):
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
-            all_outputs.extend(torch.softmax(outputs,dim=1).cpu().numpy())
+            all_outputs.extend(torch.softmax(outputs, dim=1).cpu().numpy())
 
     epoch_loss = running_loss / len(dataloader.dataset)
     accuracy = 100 * correct / total
-    return epoch_loss, accuracy,all_outputs
+    return epoch_loss, accuracy, all_outputs
 
 
-def frequency_handler(train_loader, test_loader,num_epochs):
+def frequency_handler(train_loader, test_loader, num_epochs):
     helpers.print_section("FREQUENCY DECOMPOSITION + Xception (12ch)")
     if torch.cuda.is_available():
         device = "cuda"
@@ -148,8 +150,8 @@ def frequency_handler(train_loader, test_loader,num_epochs):
 
     for epoch in range(num_epochs):
         train_loss = train_epoch_wavelet(model, train_loader, criterion, optimizer, device)
-        test_loss, test_accuracy,outputs = evaluate_model_wavelet(model, test_loader, criterion, device)
-        print(f"Epoch [{epoch+1}/{num_epochs}], "
+        test_loss, test_accuracy, outputs = evaluate_model_wavelet(model, test_loader, criterion, device)
+        print(f"Epoch [{epoch + 1}/{num_epochs}], "
               f"Train Loss: {train_loss:.4f}, "
               f"Test Loss: {test_loss:.4f}, "
               f"Acc: {test_accuracy:.2f}%")
@@ -178,6 +180,6 @@ def frequency_results(data_loader):
     model.fc = nn.Linear(num_feature, 2)
     model.to(device)
     criterion = nn.CrossEntropyLoss()
-    epoch_loss, accuracy, outputs = evaluate_model_wavelet (model, data_loader, criterion, device)
+    epoch_loss, accuracy, outputs = evaluate_model_wavelet(model, data_loader, criterion, device)
     print(f"Test Loss: {epoch_loss:.4f}, Accuracy: {accuracy:.2f}%")
     return outputs
