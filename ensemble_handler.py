@@ -3,9 +3,10 @@ from sklearn.metrics import log_loss, accuracy_score
 import numpy as np
 import pickle
 import torch
+import helpers
 
 
-def loss_function(weights, probs_list, labels, alpha=0.01):
+def loss_function(weights, probs_list, labels):
     weighted_probs = np.average(probs_list, axis=0, weights=weights)
     sum_of_probs = np.sum(weighted_probs, axis=1, keepdims=True)
     normalized_probs = weighted_probs / sum_of_probs
@@ -43,7 +44,7 @@ def ensemble_handler(model_probs_list, test_loader):
         pickle.dump(opt_weights, file)
 
     print(
-        f"Optimal weight: {opt_weights}\nEnsemble accuracy: {ensemble_accuracy:.4f}\nEnsemble Log Loss: {ensemble_log_loss:.4f}")
+        f"Optimal weight: {opt_weights}\nEnsemble accuracy: {ensemble_accuracy:.4f}%\nEnsemble Log Loss: {ensemble_log_loss:.4f}")
 
 
 def ensemble_results(model_probs_list, data_loader):
@@ -52,12 +53,7 @@ def ensemble_results(model_probs_list, data_loader):
     :param model_probs_list:
     :param data_loader:
     """
-    if torch.cuda.is_available():
-        device = "cuda"
-    elif torch.backends.mps.is_available():
-        device = "mps"
-    else:
-        device = "cpu"
+    helpers.print_section("WEIGHTED ENSEMBLER")
 
     # Load weights
     try:
@@ -77,7 +73,7 @@ def ensemble_results(model_probs_list, data_loader):
     ensemble_accuracy = accuracy_score(labels, final_bin_prev)
     ensemble_log_loss = log_loss(labels, normalized_probs)
 
-    print(f"Ensemble accuracy: {ensemble_accuracy}\nEnsemble log loss: {ensemble_log_loss}")
+    print(f"Ensemble accuracy: {ensemble_accuracy * 100:.2f}%\nEnsemble log loss: {ensemble_log_loss:.4f}")
 
 
 def get_all_labels(data_loader):
@@ -108,3 +104,30 @@ def get_model_probs(model, dataloader, device):
             all_probs.extend(probs.cpu().numpy())
 
     return np.array(all_probs)
+
+
+def ensemble_majority_voting(model_probe_list, data_loader):
+    helpers.print_section("MAJORITY VOTING ENSEMBLER")
+
+    labels = get_all_labels(data_loader=data_loader)
+    integer_model_probe_list = [np.round(model_list).astype(int) for model_list in model_probe_list]
+
+    probe_tensor = torch.tensor(np.array(integer_model_probe_list), dtype=torch.int64)
+
+    final_predictions = []
+    for i in range(probe_tensor.shape[1]):
+        example_probs = probe_tensor[:, i]
+
+        sum_of_votes = torch.sum(example_probs).item()
+
+        if sum_of_votes >= 2:
+            final_predictions.append(1)
+        else:
+            final_predictions.append(0)
+
+    correct_predictions = sum(1 for pre, label in zip(final_predictions, labels) if pre == label)
+    ensemble_accuracy = correct_predictions / len(labels) if len(labels) else 0
+    # ensemble_log_loss = log_loss(labels, correct_predictions)
+
+    # print(f"Ensemble accuracy: {ensemble_accuracy:.4f}%\nEnsemble log loss: {ensemble_log_loss:.4f}")
+    print(f"Ensemble accuracy: {ensemble_accuracy * 100:.2f}%")

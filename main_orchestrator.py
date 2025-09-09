@@ -18,7 +18,7 @@ def training(num_epochs):
                                                                 num_test_examples=64,
                                                                 batch_size=32)
 
-    helpers.print_section("TRAINING")
+    helpers.print_title("TRAINING")
     # Resnet18
     out_resnet = resnet_18.resnet_handler(train_loader, test_loader, num_epochs)
     # Clip
@@ -28,12 +28,12 @@ def training(num_epochs):
     # Ensemble
     ensemble_handler.ensemble_handler([out_resnet, out_clip, out_frequency], test_loader)
 
-    helpers.print_section("END TRAINING")
+    helpers.print_title("END TRAINING")
 
 
 def results():
     test_loader = dataset_handler.dataset_results(num_test_examples=256, batch_size=32)
-    helpers.print_section("RESULTS")
+    helpers.print_title("RESULTS")
 
     # apply random transformations on the training set
     # dis-comment if you want to test transformations effect on the results
@@ -47,6 +47,9 @@ def results():
     out_frequency = frequency.frequency_results(test_loader)
     # Ensemble
     ensemble_handler.ensemble_results([out_resnet, out_clip, out_frequency], test_loader)
+    ensemble_handler.ensemble_majority_voting([out_resnet, out_clip, out_frequency], test_loader)
+
+    helpers.print_title("WITH TRANSFORMATION")
 
     out_resnet = resnet_18.resnet_results(test_loader_modified)
     # Clip
@@ -55,8 +58,9 @@ def results():
     out_frequency = frequency.frequency_results(test_loader_modified)
     # Ensemble
     ensemble_handler.ensemble_results([out_resnet, out_clip, out_frequency], test_loader_modified)
+    ensemble_handler.ensemble_majority_voting([out_resnet, out_clip, out_frequency], test_loader_modified)
 
-    helpers.print_section("END RESULTS")
+    helpers.print_title("END RESULTS")
 
 
 if __name__ == "__main__":
