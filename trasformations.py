@@ -65,4 +65,4 @@ def apply_transformation(dataloader):
     all_labels = torch.cat(all_labels)  # (N,)
 
     dataset = DictDataset(all_images, all_labels)
-    return DataLoader(dataset, batch_size=dataloader.batch_size, shuffle=True)
+    return DataLoader(dataset, batch_size=dataloader.batch_size, shuffle=False)
