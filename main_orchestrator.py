@@ -76,27 +76,30 @@ def results():
     test_loader = dataset_handler.dataset_results(num_test_examples=256, batch_size=32)
     helpers.print_title("RESULTS")
 
-    # apply random transformations on the training set
-    # dis-comment if you want to test transformations effect on the results
-    test_loader_modified = trasformations.apply_transformation(test_loader)
-
     # Resnet18
-    out_resnet = resnet_18.resnet_results(test_loader)
+    out_resnet = resnet_18.resnet_results(test_loader, "dc/resnet_18_weight.pth")
+    test_feature_resnet = resnet_18.resnet_get_features(test_loader, "dc/resnet_18_weight_tr.pth")
     # Clip
-    out_clip = clip_fc.clip_fc_results(test_loader)
+    out_clip = clip_fc.clip_fc_results(test_loader, "matte/fc_layer_weight.pth")
+    test_feature_clip = clip_fc.clip_fc_get_features(test_loader)
     # Frequency
-    out_frequency = frequency.frequency_results(test_loader)
+    out_frequency = frequency.frequency_results(test_loader, "simo/frequency_Xception_weight.pth")
+    test_feature_frequency = frequency.xception_feature_extractor(test_loader, "simo/frequency_Xception_weight_tr.pth")
     # Ensemble
-    ensemble_handler.ensemble_results([out_resnet, out_clip, out_frequency], test_loader)
     ensemble_handler.ensemble_majority_voting([out_resnet, out_clip, out_frequency], test_loader)
+    ensemble_handler.ensemble_results([out_resnet, out_clip, out_frequency], test_loader)
+
+    test_feature = [test_feature_resnet, test_feature_clip, test_feature_frequency]
+    ensemble_handler.ensemble_meta_results(test_feature, test_loader, batch_size=32)
 
     helpers.print_title("WITH TRANSFORMATION")
+    test_loader_modified = trasformations.apply_transformation(test_loader)
     # Resnet18
-    out_resnet = resnet_18.resnet_results(test_loader_modified)
+    out_resnet = resnet_18.resnet_results(test_loader_modified, "dc/resnet_18_weight_tr.pth")
     # Clip
-    out_clip = clip_fc.clip_fc_results(test_loader_modified)
+    out_clip = clip_fc.clip_fc_results(test_loader_modified, "matte/fc_layer_weight_tr.pth")
     # Frequency
-    out_frequency = frequency.frequency_results(test_loader_modified)
+    out_frequency = frequency.frequency_results(test_loader_modified, "simo/frequency_Xception_weight_tr.pth")
     # Ensemble
     ensemble_handler.ensemble_results([out_resnet, out_clip, out_frequency], test_loader_modified)
     ensemble_handler.ensemble_majority_voting([out_resnet, out_clip, out_frequency], test_loader_modified)

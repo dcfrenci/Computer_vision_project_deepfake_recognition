@@ -6,6 +6,7 @@ import torch
 from torch.utils.data import TensorDataset, DataLoader
 import torch.nn as nn
 import torch.optim as optim
+from pathlib import Path
 import helpers
 
 
@@ -199,4 +200,53 @@ def ensemble_meta_model(train_features, train_loader, test_features, test_loader
             all_labels.extend(labels.cpu().numpy())
 
     accuracy = accuracy_score(all_labels, all_predictions)
-    print(f"\nAccuracy del Meta-Modello sul test set: {accuracy:.4f}")
+    print(f"\nAccuracy del Meta-Modello sul test set: {accuracy * 100:.2f}")
+
+    torch.save(meta_model.state_dict(), "meta_model_weights.pth")
+
+
+def ensemble_meta_results(test_features, test_loader, batch_size):
+    helpers.print_section("ENSEMBLE META RESULTS")
+
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif torch.backends.mps.is_available():
+        device = "mps"
+    else:
+        device = "cpu"
+    print(f"Using device: {device}")
+
+    test_features = torch.cat(test_features, dim=1)
+    _, test_labels = get_all_labels(test_loader)
+    test_dataset = TensorDataset(test_features, test_labels)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+    input_dim = test_features.shape[1]
+    model = nn.Sequential(
+        nn.Linear(input_dim, 64),
+        nn.ReLU(),
+        nn.Linear(64, 2)
+    ).to(device)
+
+    weights_path = Path("meta_model_weights.pth")
+    if weights_path.exists():
+        model.load_state_dict(torch.load(weights_path, weights_only=True, map_location=device))
+        print("Resnet loaded with saved weights")
+    else:
+        print("Error: Saved weights not found. Please train the model first.")
+        return None
+
+    model.eval()
+    all_predictions = []
+    all_labels = []
+
+    with torch.no_grad():
+        for features, labels in test_loader:
+            features, labels = features.to(device), labels.to(device)
+            outputs = model(features)
+            _, predictions = torch.max(outputs, 1)
+            all_predictions.extend(predictions.cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
+
+    accuracy = accuracy_score(all_labels, all_predictions)
+    print(f"\nAccuracy del Meta-Modello sul test set: {accuracy * 100:.2f}%")
