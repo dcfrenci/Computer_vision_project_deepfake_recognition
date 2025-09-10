@@ -127,7 +127,7 @@ def evaluate_model_wavelet(model, dataloader, criterion, device):
     return epoch_loss, accuracy, all_outputs
 
 
-def frequency_handler(train_loader, test_loader, num_epochs):
+def frequency_handler(train_loader, test_loader, num_epochs, path_name):
     helpers.print_section("FREQUENCY DECOMPOSITION + Xception (12ch)")
     if torch.cuda.is_available():
         device = "cuda"
@@ -137,7 +137,7 @@ def frequency_handler(train_loader, test_loader, num_epochs):
         device = "cpu"
     print(f"Using device: {device}")
 
-    weight_path = Path("simo/frequency_Xception_weight.pth")
+    weight_path = Path(path_name)
 
     model = build_xception_12ch(weight_path)
     model = model.to(device)
@@ -161,7 +161,7 @@ def frequency_handler(train_loader, test_loader, num_epochs):
     return outputs
 
 
-def frequency_results(data_loader):
+def frequency_results(data_loader, path_name):
     helpers.print_section("FREQUENCY + Xception 18")
     if torch.cuda.is_available():
         device = "cuda"
@@ -170,7 +170,7 @@ def frequency_results(data_loader):
     else:
         device = "cpu"
     print(f"Using device: {device}")
-    weight_path = Path("simo/frequency_Xception_weight.pth")
+    weight_path = Path(path_name)
     if weight_path.exists():
         model = build_xception_12ch(weight_path)
     else:
@@ -185,7 +185,7 @@ def frequency_results(data_loader):
 
 #--------------------------------LAST_LAYER_REMOVED-----------------------------------------------
 
-def xception_feature_extractor (data_loader):
+def xception_feature_extractor(data_loader, path_name):
     helpers.print_section("Xception model feature extractor")
     if torch.cuda.is_available():
         device = "cuda"
@@ -195,7 +195,7 @@ def xception_feature_extractor (data_loader):
         device = "cpu"
     print(f"Using device: {device}")
 
-    weight_path = Path("simo/frequency_Xception_weight.pth")
+    weight_path = Path(path_name)
     if weight_path.exists():
         model = build_xception_12ch(weight_path)
         model = nn.Sequential(*(list(model.children())[:-1]))  #il modello sarà costituito da tutta la backbone tranne il classificatore finale

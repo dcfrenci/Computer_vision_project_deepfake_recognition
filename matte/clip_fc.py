@@ -22,7 +22,7 @@ class DeepfakeClassifier(nn.Module):
         return logits
 
 
-def clip_handler(train_loader, test_loader,num_epochs):
+def clip_handler(train_loader, test_loader, num_epochs, path_name):
     helpers.print_section("CLIP")
 
     if torch.cuda.is_available():
@@ -40,8 +40,8 @@ def clip_handler(train_loader, test_loader,num_epochs):
 
     model = DeepfakeClassifier(clip_model).to(device)
 
-    if Path("matte/fc_layer_weight.pth").exists():
-        model.head.load_state_dict(torch.load("matte/fc_layer_weight.pth", weights_only=True, map_location=device))
+    if Path(path_name).exists():
+        model.head.load_state_dict(torch.load(path_name, weights_only=True, map_location=device))
         print(f"head layer loaded with pretrained weights")
     else:
         print(f"head layer loaded without pretrained weights")
@@ -58,7 +58,7 @@ def clip_handler(train_loader, test_loader,num_epochs):
             f'Epoch [{epoch + 1}/{num_epochs}], Training Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}, Accuracy: {test_accuracy:.2f}%')
 
     # Save just the weight and bias of all layer
-    torch.save(model.head.state_dict(), "matte/fc_layer_weight.pth")
+    torch.save(model.head.state_dict(), path_name)
 
     return outputs
 
@@ -111,7 +111,7 @@ def evaluate_model(model, data_loader, criterion, device):
     return epoch_loss, accuracy, all_outputs
 
 
-def clip_fc_results(data_loader):
+def clip_fc_results(data_loader, path_name):
     helpers.print_section("CLIP")
 
     if torch.cuda.is_available():
@@ -129,8 +129,8 @@ def clip_fc_results(data_loader):
 
     model = DeepfakeClassifier(clip_model).to(device)
 
-    if Path("matte/fc_layer_weight.pth").exists():
-        model.head.load_state_dict(torch.load("matte/fc_layer_weight.pth", weights_only=True, map_location=device))
+    if Path(path_name).exists():
+        model.head.load_state_dict(torch.load(path_name, weights_only=True, map_location=device))
         print(f"head layer loaded with pretrained weights")
     else:
         print(f"head layer loaded without pretrained weights")
