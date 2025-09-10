@@ -1,4 +1,3 @@
-
 import torch
 import random
 from torch.utils.data import Dataset, DataLoader
@@ -8,27 +7,27 @@ from torchvision.transforms.v2.functional import adjust_contrast, adjust_brightn
 
 
 def apply_gaussian_noise(img):
-    return torchvision.transforms.v2.functional.gaussian_noise_image(img,0.0,0.1, True)
+    return torchvision.transforms.v2.functional.gaussian_noise_image(img,0.0,0.7, True)
 
 def apply_blur(img):
-    blur = torchvision.transforms.GaussianBlur(kernel_size=5,sigma=(0.1,2.0))
+    blur = torchvision.transforms.GaussianBlur(kernel_size=5,sigma=(1.0,3.0))
     return blur(img)
 
 def apply_contrast_luminosity(img):
-    contrast_img = adjust_contrast(img,random.uniform(0.8, 1.2))
-    return adjust_brightness(contrast_img,random.uniform(0.8, 1.2))
+    contrast_img = adjust_contrast(img,random.uniform(0.5, 2))
+    return adjust_brightness(contrast_img,random.uniform(0.5, 2))
 
 
 
 def random_transform(img):
-    x = random.randint(1, 4)
-    if x == 1:
+    x = random.randint(1, 5)
+    if x == 1 or x == 2:
         return img
-    elif x == 2:
-        return apply_gaussian_noise(img)
     elif x == 3:
-        return apply_blur(img)
+        return apply_gaussian_noise(img)
     elif x == 4:
+        return apply_blur(img)
+    elif x == 5:
         return apply_contrast_luminosity(img)
 
 # ---- Dataset che restituisce dict ----
