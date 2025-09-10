@@ -145,7 +145,6 @@ def clip_fc_results(data_loader):
 
 
 def clip_fc_get_features(data_loader):
-
     helpers.print_section("CLIP GET FEATURES")
 
     if torch.cuda.is_available():
@@ -163,9 +162,10 @@ def clip_fc_get_features(data_loader):
 
     all_features = []
     with torch.no_grad():
-        for input, labels in data_loader:
-            input = input.to(device)
-            features = clip_model.encode_image(input)
+        for batch in data_loader:
+            inputs = batch['image'].to(device)
+            inputs = inputs.to(device)
+            features = clip_model.encode_image(inputs)
             all_features.append(features)
     
-    return all_features
+    return torch.cat(all_features, dim=0)

@@ -8,10 +8,7 @@ from simo import frequency
 
 
 def main():
-    # training(num_epochs=15)
-    test_loader = dataset_handler.dataset_results(num_test_examples=1, batch_size=32)
-    ret = resnet_18.resnet_get_features(test_loader)
-    print(ret)
+    training(num_epochs=15)
     # results()
 
 
@@ -22,24 +19,26 @@ def training(num_epochs):
 
     helpers.print_title("TRAINING")
     # Resnet18
-    out_resnet = resnet_18.resnet_handler(train_loader, test_loader, num_epochs)
-    # Clip
-    out_clip = clip_fc.clip_handler(train_loader, test_loader, num_epochs)
-    # Frequency
-    out_frequency = frequency.frequency_handler(train_loader, test_loader, num_epochs)
-    # Ensemble
-    ensemble_handler.ensemble_handler([out_resnet, out_clip, out_frequency], test_loader)
+    # out_resnet = resnet_18.resnet_handler(train_loader, test_loader, num_epochs)
+    # # Clip
+    # out_clip = clip_fc.clip_handler(train_loader, test_loader, num_epochs)
+    # # Frequency
+    # out_frequency = frequency.frequency_handler(train_loader, test_loader, num_epochs)
+    # # Ensemble
+    # ensemble_handler.ensemble_handler([out_resnet, out_clip, out_frequency], test_loader)
 
     helpers.print_title("FEATURE EXTRACTION")
+    train_loader = trasformations.apply_transformation(train_loader)
+    test_loader = trasformations.apply_transformation(test_loader)
     # Resnet18
     train_feature_resnet = resnet_18.resnet_get_features(train_loader)
     test_feature_resnet = resnet_18.resnet_get_features(test_loader)
     # Clip
-    train_feature_clip = clip_fc.clip_fc_results(train_loader)
-    test_feature_clip = clip_fc.clip_fc_results(test_loader)
+    train_feature_clip = clip_fc.clip_fc_get_features(train_loader)
+    test_feature_clip = clip_fc.clip_fc_get_features(test_loader)
     # Frequency
-    train_feature_frequency = frequency.frequency_results(train_loader)
-    test_feature_frequency = frequency.frequency_results(test_loader)
+    train_feature_frequency = frequency.xception_feature_extractor(train_loader)
+    test_feature_frequency = frequency.xception_feature_extractor(test_loader)
     # Ensemble
     train_feature = [train_feature_resnet, train_feature_clip, train_feature_frequency]
     test_feature = [test_feature_resnet, test_feature_clip, test_feature_frequency]
@@ -76,8 +75,6 @@ def results():
     # Ensemble
     ensemble_handler.ensemble_results([out_resnet, out_clip, out_frequency], test_loader_modified)
     ensemble_handler.ensemble_majority_voting([out_resnet, out_clip, out_frequency], test_loader_modified)
-
-
 
     helpers.print_title("END RESULTS")
 

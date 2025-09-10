@@ -1,5 +1,4 @@
 from pathlib import Path
-from xml.sax.handler import all_features
 
 import cv2
 import numpy as np
@@ -212,5 +211,5 @@ def xception_feature_extractor (data_loader):
             inputs = apply_wavelet(batch['image']).to(device)  # applica wavelet
             features = model(inputs)
             features = features.view(features.size(0), -1)  # flatten
-            all_features.append(features.cpu())
-    return all_features
+            all_features.append(features)
+    return torch.cat(all_features, dim=0)

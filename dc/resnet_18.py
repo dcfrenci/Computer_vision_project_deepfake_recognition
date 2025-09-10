@@ -124,41 +124,6 @@ def resnet_results(data_loader):
     return outputs
 
 
-# def resnet_feature_training(train_loader, test_loader, num_epochs):
-#     helpers.print_section("RESNET FEATURE TRAINING")
-#
-#     if torch.cuda.is_available():
-#         device = "cuda"
-#     elif torch.backends.mps.is_available():
-#         device = "mps"
-#     else:
-#         device = "cpu"
-#     print(f"Using device: {device}")
-#
-#     model = resnet18() if Path("dc/resnet_feature_extractor_weights.pth").exists() else resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
-#
-#     num_feature = model.fc.in_features
-#     model.fc = nn.Linear(num_feature, 2)
-#     model = model.to(device)
-#     if Path("dc/resnet_feature_extractor_weights.pth").exists():
-#         model.load_state_dict(torch.load("dc/resnet_feature_extractor_weights.pth", weights_only=True, map_location=device))
-#         print(f"Resnet loaded with pretrained weights")
-#     else:
-#         print(f"Resnet loaded with IMAGENET1K_V1 weights")
-#
-#     criterion = nn.CrossEntropyLoss()
-#     optimizer = optim.Adam(model.parameters(), lr=0.001)
-#
-#     # --- Main Training Loop ---
-#     for epoch in range(num_epochs):
-#         train_loss = train_epoch(model, train_loader, criterion, optimizer, device)
-#         test_loss, test_accuracy, _ = evaluate_model(model, test_loader, criterion, device)
-#         print(f'Epoch [{epoch + 1}/{num_epochs}], Training Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}, Accuracy: {test_accuracy:.2f}%')
-#
-#     # Save just the weight and bias of all layer removed the last one
-#     torch.save(model.state_dict(), "dc/resnet_feature_extractor_weights.pth")
-
-
 def resnet_get_features(data_loader):
     helpers.print_section("RESNET GET FEATURE")
 
@@ -171,15 +136,17 @@ def resnet_get_features(data_loader):
     print(f"Using device: {device}")
 
     model = resnet18()
+    num_feature = model.fc.in_features
+    model.fc = nn.Linear(num_feature, 2)
     weights_path = Path("dc/resnet_18_weight.pth")
     if weights_path.exists():
         model.load_state_dict(torch.load(weights_path, weights_only=True, map_location=device))
+        model = nn.Sequential(*(list(model.children())[:-1]))
         print("Resnet loaded with saved weights")
     else:
         print("Error: Saved weights not found. Please train the model first.")
         return None
 
-    model = nn.Sequential(*(list(model.children())[:-1]))
     model = model.to(device)
     model.eval()
 
@@ -190,6 +157,6 @@ def resnet_get_features(data_loader):
             inputs = inputs.to(device)
             features = model(inputs)
             features = features.view(features.size(0), -1)
-            all_features.append(features.cpu())
+            all_features.append(features)
 
-    return all_features
+    return torch.cat(all_features, dim=0)

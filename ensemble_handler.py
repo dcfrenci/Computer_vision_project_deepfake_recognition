@@ -85,10 +85,12 @@ def get_all_labels(data_loader):
     :return: np.Array containing all the label of DataLoader.
     """
     all_labels = []
+    all_labels_tensor = []
     for batch in data_loader:
         labels = batch['label']
         all_labels.extend(labels.cpu().numpy())
-    return np.array(all_labels), torch.cat(all_labels, dim=0)
+        all_labels_tensor.append(labels.cpu())
+    return np.array(all_labels), torch.cat(all_labels_tensor, dim=0)
 
 
 def get_model_probs(model, dataloader, device):
