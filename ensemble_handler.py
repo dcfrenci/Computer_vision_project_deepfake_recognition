@@ -3,6 +3,9 @@ from sklearn.metrics import log_loss, accuracy_score
 import numpy as np
 import pickle
 import torch
+from torch.utils.data import TensorDataset, DataLoader
+import torch.nn as nn
+import torch.optim as optim
 import helpers
 
 
@@ -19,7 +22,7 @@ def ensemble_handler(model_probs_list, test_loader):
     :param model_probs_list:
     :param test_loader:
     """
-    labels = get_all_labels(data_loader=test_loader)
+    labels, _ = get_all_labels(data_loader=test_loader)
     num_models = len(model_probs_list)
     opt_weights = optimize.minimize(
         loss_function,
@@ -63,7 +66,7 @@ def ensemble_results(model_probs_list, data_loader):
         print(f"Error while loading ensemble weight")
         return None
 
-    labels = get_all_labels(data_loader=data_loader)
+    labels, _ = get_all_labels(data_loader=data_loader)
 
     combined_probs = np.average(model_probs_list, axis=0, weights=optimal_weights)
     sum_of_probs = np.sum(combined_probs, axis=1, keepdims=True)
@@ -85,7 +88,7 @@ def get_all_labels(data_loader):
     for batch in data_loader:
         labels = batch['label']
         all_labels.extend(labels.cpu().numpy())
-    return np.array(all_labels)
+    return np.array(all_labels), torch.cat(all_labels, dim=0)
 
 
 def get_model_probs(model, dataloader, device):
@@ -109,7 +112,7 @@ def get_model_probs(model, dataloader, device):
 def ensemble_majority_voting(model_probe_list, data_loader):
     helpers.print_section("MAJORITY VOTING ENSEMBLER")
 
-    labels = get_all_labels(data_loader=data_loader)
+    labels, _ = get_all_labels(data_loader=data_loader)
     integer_model_probe_list = [np.round(model_list).astype(int) for model_list in model_probe_list]
 
     probe_tensor = torch.tensor(np.array(integer_model_probe_list), dtype=torch.int64)
@@ -131,3 +134,67 @@ def ensemble_majority_voting(model_probe_list, data_loader):
 
     # print(f"Ensemble accuracy: {ensemble_accuracy:.4f}%\nEnsemble log loss: {ensemble_log_loss:.4f}")
     print(f"Ensemble accuracy: {ensemble_accuracy * 100:.2f}%")
+
+
+def ensemble_meta_model(train_features, train_loader, test_features, test_loader, num_epochs, batch_size):
+    helpers.print_section("ENSEMBLE META MODEL")
+
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif torch.backends.mps.is_available():
+        device = "mps"
+    else:
+        device = "cpu"
+    print(f"Using device: {device}")
+
+    train_features = torch.cat(train_features, dim=1)
+    test_features = torch.cat(test_features, dim=1)
+    _, train_labels = get_all_labels(train_loader)
+    _, test_labels = get_all_labels(test_loader)
+
+    train_dataset = TensorDataset(train_features, train_labels)
+    test_dataset = TensorDataset(test_features, test_labels)
+
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+    input_dim = train_features.shape[1]
+    meta_model = nn.Sequential(
+        nn.Linear(input_dim, 64),
+        nn.ReLU(),
+        nn.Linear(64, 2)
+    ).to(device)
+
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(meta_model.parameters(), lr=0.001)
+
+    for epoch in range(num_epochs):
+        meta_model.train()
+        running_loss = 0.0
+        for features, labels in train_loader:
+            features, labels = features.to(device), labels.to(device)
+
+            optimizer.zero_grad()
+            outputs = meta_model(features)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+            running_loss += loss.item() * features.size(0)
+
+        epoch_loss = running_loss / len(train_dataset)
+        print(f'Epoch [{epoch + 1}/{num_epochs}], Loss: {epoch_loss:.4f}')
+
+    meta_model.eval()
+    all_predictions = []
+    all_labels = []
+
+    with torch.no_grad():
+        for features, labels in test_loader:
+            features, labels = features.to(device), labels.to(device)
+            outputs = meta_model(features)
+            _, predictions = torch.max(outputs, 1)
+            all_predictions.extend(predictions.cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
+
+    accuracy = accuracy_score(all_labels, all_predictions)
+    print(f"\nAccuracy del Meta-Modello sul test set: {accuracy:.4f}")

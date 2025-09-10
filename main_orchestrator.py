@@ -28,6 +28,21 @@ def training(num_epochs):
     # Ensemble
     ensemble_handler.ensemble_handler([out_resnet, out_clip, out_frequency], test_loader)
 
+    helpers.print_title("FEATURE EXTRACTION")
+    # Resnet18
+    train_feature_resnet = resnet_18.resnet_get_features(train_loader)
+    test_feature_resnet = resnet_18.resnet_get_features(test_loader)
+    # Clip
+    train_feature_clip = clip_fc.clip_fc_results(train_loader)
+    test_feature_clip = clip_fc.clip_fc_results(test_loader)
+    # Frequency
+    train_feature_frequency = frequency.frequency_results(train_loader)
+    test_feature_frequency = frequency.frequency_results(test_loader)
+    # Ensemble
+    train_feature = [train_feature_resnet, train_feature_clip, train_feature_frequency]
+    test_feature = [test_feature_resnet, test_feature_clip, test_feature_frequency]
+    ensemble_handler.ensemble_meta_model(train_feature, train_loader, test_feature, test_loader, num_epochs=15, batch_size=32)
+
     helpers.print_title("END TRAINING")
 
 
@@ -50,7 +65,7 @@ def results():
     ensemble_handler.ensemble_majority_voting([out_resnet, out_clip, out_frequency], test_loader)
 
     helpers.print_title("WITH TRANSFORMATION")
-
+    # Resnet18
     out_resnet = resnet_18.resnet_results(test_loader_modified)
     # Clip
     out_clip = clip_fc.clip_fc_results(test_loader_modified)
@@ -59,6 +74,8 @@ def results():
     # Ensemble
     ensemble_handler.ensemble_results([out_resnet, out_clip, out_frequency], test_loader_modified)
     ensemble_handler.ensemble_majority_voting([out_resnet, out_clip, out_frequency], test_loader_modified)
+
+
 
     helpers.print_title("END RESULTS")
 
