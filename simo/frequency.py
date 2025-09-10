@@ -1,4 +1,5 @@
 from pathlib import Path
+from xml.sax.handler import all_features
 
 import cv2
 import numpy as np
@@ -49,7 +50,7 @@ def apply_wavelet(batch_images):
 # =========================
 def build_xception_12ch(weight_path: Path):
     if weight_path.exists():
-        model = timm.create_model("legacy_xception", pretrained=False, num_classes=2)
+        model = timm.create_model("legacy_xception", pretrained=False, num_classes = 2)
         old_conv = model.conv1  #salvo riferimento al layer originale del resnet18 con 3 canali
         model.conv1 = nn.Conv2d(12, old_conv.out_channels,
                                 kernel_size=old_conv.kernel_size,
@@ -176,10 +177,40 @@ def frequency_results(data_loader):
     else:
         print("Error: Saved weights not found. Please train the model first.")
         return None
-    num_feature = model.fc.in_features
-    model.fc = nn.Linear(num_feature, 2)
     model.to(device)
     criterion = nn.CrossEntropyLoss()
     epoch_loss, accuracy, outputs = evaluate_model_wavelet(model, data_loader, criterion, device)
     print(f"Test Loss: {epoch_loss:.4f}, Accuracy: {accuracy:.2f}%")
     return outputs
+
+
+#--------------------------------LAST_LAYER_REMOVED-----------------------------------------------
+
+def xception_feature_extractor (data_loader):
+    helpers.print_section("Xception model feature extractor")
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif torch.backends.mps.is_available():
+        device = "mps"
+    else:
+        device = "cpu"
+    print(f"Using device: {device}")
+
+    weight_path = Path("simo/frequency_Xception_weight.pth")
+    if weight_path.exists():
+        model = build_xception_12ch(weight_path)
+        model = nn.Sequential(*(list(model.children())[:-1]))  #il modello sarà costituito da tutta la backbone tranne il classificatore finale
+    else:
+        print("Error: Saved weights not found. Please train the model first.")
+        return None
+    model.to(device)
+    model.eval()
+
+    all_features = []
+    with torch.no_grad():
+        for batch in data_loader:
+            inputs = apply_wavelet(batch['image']).to(device)  # applica wavelet
+            features = model(inputs)
+            features = features.view(features.size(0), -1)  # flatten
+            all_features.append(features.cpu())
+    return all_features
