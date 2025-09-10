@@ -142,3 +142,30 @@ def clip_fc_results(data_loader):
     print(f"Test Loss: {epoch_loss:.4f}, Accuracy: {accuracy:.2f}%")
 
     return outputs
+
+
+def clip_fc_get_features(data_loader):
+
+    helpers.print_section("CLIP GET FEATURES")
+
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif torch.backends.mps.is_available():
+        device = "mps"
+    else:
+        device = "cpu"
+    print(f"Using device: {device}")
+
+    clip_model, preprocess = clip.load("ViT-B/32", device=device)
+
+    for param in clip_model.parameters():
+        param.requires_grad = False
+
+    all_features = []
+    with torch.no_grad():
+        for input, labels in data_loader:
+            input = input.to(device)
+            features = clip_model.encode_image(input)
+            all_features.append(features)
+    
+    return all_features
