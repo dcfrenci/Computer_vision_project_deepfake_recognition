@@ -171,7 +171,6 @@ def resnet_get_features(data_loader):
     print(f"Using device: {device}")
 
     model = resnet18()
-    model = nn.Sequential(*(list(model.children())[:-1]))
     weights_path = Path("dc/resnet_18_weight.pth")
     if weights_path.exists():
         model.load_state_dict(torch.load(weights_path, weights_only=True, map_location=device))
@@ -180,15 +179,17 @@ def resnet_get_features(data_loader):
         print("Error: Saved weights not found. Please train the model first.")
         return None
 
+    model = nn.Sequential(*(list(model.children())[:-1]))
     model = model.to(device)
     model.eval()
 
     all_features = []
     with torch.no_grad():
-        for inputs, labels in data_loader:
+        for batch in data_loader:
+            inputs = batch['image'].to(device)
             inputs = inputs.to(device)
             features = model(inputs)
             features = features.view(features.size(0), -1)
             all_features.append(features.cpu())
 
-    return torch.cat(all_features, dim=0)
+    return all_features

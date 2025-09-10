@@ -9,8 +9,10 @@ from simo import frequency
 
 def main():
     # training(num_epochs=15)
-
-    results()
+    test_loader = dataset_handler.dataset_results(num_test_examples=1, batch_size=32)
+    ret = resnet_18.resnet_get_features(test_loader)
+    print(ret)
+    # results()
 
 
 def training(num_epochs):
