@@ -157,7 +157,7 @@ def frequency_handler(train_loader, test_loader, num_epochs):
               f"Test Loss: {test_loss:.4f}, "
               f"Acc: {test_accuracy:.2f}%")
 
-    # salva i pesi
+    # salva i pesi-
     torch.save(model.state_dict(), weight_path)
     return outputs
 
