@@ -1,12 +1,14 @@
-from scipy import optimize
-from sklearn.metrics import log_loss, accuracy_score
-import numpy as np
 import pickle
+from pathlib import Path
+
+import numpy as np
 import torch
-from torch.utils.data import TensorDataset, DataLoader
 import torch.nn as nn
 import torch.optim as optim
-from pathlib import Path
+from scipy import optimize
+from sklearn.metrics import log_loss, accuracy_score
+from torch.utils.data import TensorDataset, DataLoader
+
 import helpers
 
 
@@ -23,6 +25,8 @@ def ensemble_handler(model_probs_list, test_loader):
     :param model_probs_list:
     :param test_loader:
     """
+    helpers.print_section("ENSEMBLE WEIGHTED")
+
     labels, _ = get_all_labels(data_loader=test_loader)
     num_models = len(model_probs_list)
     opt_weights = optimize.minimize(
@@ -133,9 +137,6 @@ def ensemble_majority_voting(model_probe_list, data_loader):
 
     correct_predictions = sum(1 for pre, label in zip(final_predictions, labels) if pre == label)
     ensemble_accuracy = correct_predictions / len(labels) if len(labels) else 0
-    # ensemble_log_loss = log_loss(labels, correct_predictions)
-
-    # print(f"Ensemble accuracy: {ensemble_accuracy:.4f}%\nEnsemble log loss: {ensemble_log_loss:.4f}")
     print(f"Ensemble accuracy: {ensemble_accuracy * 100:.2f}%")
 
 
@@ -200,7 +201,7 @@ def ensemble_meta_model(train_features, train_loader, test_features, test_loader
             all_labels.extend(labels.cpu().numpy())
 
     accuracy = accuracy_score(all_labels, all_predictions)
-    print(f"\nAccuracy del Meta-Modello sul test set: {accuracy * 100:.2f}")
+    print(f"Meta model accuracy: {accuracy * 100:.2f}")
 
     torch.save(meta_model.state_dict(), "meta_model_weights.pth")
 
@@ -231,7 +232,7 @@ def ensemble_meta_results(test_features, test_loader, batch_size):
     weights_path = Path("meta_model_weights.pth")
     if weights_path.exists():
         model.load_state_dict(torch.load(weights_path, weights_only=True, map_location=device))
-        print("Resnet loaded with saved weights")
+        print("Meta model loaded with saved weights")
     else:
         print("Error: Saved weights not found. Please train the model first.")
         return None
@@ -249,4 +250,4 @@ def ensemble_meta_results(test_features, test_loader, batch_size):
             all_labels.extend(labels.cpu().numpy())
 
     accuracy = accuracy_score(all_labels, all_predictions)
-    print(f"\nAccuracy del Meta-Modello sul test set: {accuracy * 100:.2f}%")
+    print(f"Meta model accuracy: {accuracy * 100:.2f}%")
