@@ -103,8 +103,8 @@ def results():
     out_frequency = frequency.frequency_results(test_loader_modified, "simo/frequency_Xception_weight_tr.pth")
     test_feature_frequency = frequency.xception_feature_extractor(test_loader_modified, "simo/frequency_Xception_weight_tr.pth")
     # Ensemble
-    ensemble_handler.ensemble_results([out_resnet, out_clip, out_frequency], test_loader_modified)
     ensemble_handler.ensemble_majority_voting([out_resnet, out_clip, out_frequency], test_loader_modified)
+    ensemble_handler.ensemble_results([out_resnet, out_clip, out_frequency], test_loader_modified)
     test_feature_tr = [test_feature_resnet, test_feature_clip, test_feature_frequency]
     ensemble_handler.ensemble_meta_results(test_feature_tr, test_loader_modified, batch_size=32)
 

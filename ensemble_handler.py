@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from scipy import optimize
-from sklearn.metrics import log_loss, accuracy_score
+from sklearn.metrics import log_loss, accuracy_score, precision_score, recall_score, f1_score
 from torch.utils.data import TensorDataset, DataLoader
 
 import helpers
@@ -79,9 +79,16 @@ def ensemble_results(model_probs_list, data_loader):
 
     final_bin_prev = np.argmax(normalized_probs, axis=1)
     ensemble_accuracy = accuracy_score(labels, final_bin_prev)
+    precision = precision_score(labels, final_bin_prev)
+    recall = recall_score(labels, final_bin_prev)
+    f1 = f1_score(labels, final_bin_prev)
     ensemble_log_loss = log_loss(labels, normalized_probs)
 
-    print(f"Ensemble accuracy: {ensemble_accuracy * 100:.2f}%\nEnsemble log loss: {ensemble_log_loss:.4f}")
+    print(f"Ensemble accuracy: {ensemble_accuracy * 100:.2f}%\n"
+          f"Ensemble precision: {precision:.3f}\n"
+          f"Ensemble recall: {recall:.3f}\n"
+          f"Ensemble f1: {f1:.3f}\n"
+          f"Ensemble log loss: {ensemble_log_loss:.4f}")
 
 
 def get_all_labels(data_loader):
@@ -250,4 +257,13 @@ def ensemble_meta_results(test_features, test_loader, batch_size):
             all_labels.extend(labels.cpu().numpy())
 
     accuracy = accuracy_score(all_labels, all_predictions)
-    print(f"Meta model accuracy: {accuracy * 100:.2f}%")
+    precision = precision_score(all_labels, all_predictions)
+    recall = recall_score(all_labels, all_predictions)
+    f1 = f1_score(all_labels, all_predictions)
+    ensemble_log_loss = log_loss(all_labels, all_predictions)
+
+    print(f"Meta model accuracy: {accuracy * 100:.2f}%\n"
+          f"Ensemble precision: {precision:.3f}\n"
+          f"Ensemble recall: {recall:.3f}\n"
+          f"Ensemble f1: {f1:.3f}\n"
+          f"Ensemble log loss: {ensemble_log_loss:.4f}")
