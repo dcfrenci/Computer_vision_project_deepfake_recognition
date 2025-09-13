@@ -7,6 +7,7 @@ import timm
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from PIL import Image
 from torchvision import transforms
 
 import helpers
@@ -213,3 +214,37 @@ def xception_feature_extractor(data_loader, path_name):
             features = features.view(features.size(0), -1)  # flatten
             all_features.append(features)
     return torch.cat(all_features, dim=0)
+
+#------------------------------------------------HEATMAP---------------------------------------------------
+
+
+def heatmap_handler(path_name):
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif torch.backends.mps.is_available():
+        device = "mps"
+    else:
+        device = "cpu"
+    print(f"Using device: {device}")
+
+    weight_path = Path(path_name)
+    if not weight_path.exists():
+        print("Error: Saved weights not found. Please train the model first.")
+        return
+
+    model = build_xception_12ch(weight_path)
+    model.to(device).eval()
+
+    image_path = "simo/images/fotopersona.jpeg"
+    original_image = Image.open(image_path).convert("RGB")
+
+    transform_for_wavelet = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor()
+    ])
+    input_tensor_for_wavelet = transform_for_wavelet(original_image).unsqueeze(0).to(device)
+    input_tensor_12ch = apply_wavelet(input_tensor_for_wavelet).to(device)
+    target_layers = [model.conv4]
+    helpers.heatmap_helpers(model,target_layers,input_tensor_12ch,original_image)
+
+
