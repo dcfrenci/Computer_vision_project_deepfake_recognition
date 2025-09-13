@@ -8,8 +8,9 @@ from simo import frequency
 
 
 def main():
-    # training(num_epochs=15)
-    results()
+    training(num_epochs=15)
+    #results()
+    #importancemap_show()
 
 
 def training(num_epochs):
@@ -109,6 +110,12 @@ def results():
     ensemble_handler.ensemble_meta_results(test_feature_tr, test_loader_modified, batch_size=32)
 
     helpers.print_title("END RESULTS")
+
+def importancemap_show():
+    frequency.xception_heatmap_handler("simo/frequency_Xception_weight.pth")
+    clip_fc.clip_heatmap_handler("matte/fc_layer_weight.pth")
+    resnet_18.resnet_heatmap_handler("dc/resnet_18_weight.pth")
+
 
 
 if __name__ == "__main__":

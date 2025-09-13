@@ -1,7 +1,6 @@
 import os
 import matplotlib.pyplot as plt
 import numpy as np
-from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 from pytorch_grad_cam.utils.image import show_cam_on_image
 import torch
@@ -26,9 +25,7 @@ def print_title(title, char='-'):
 
 #---------------------------------HEATMAP CODE-------------------------------------
 
-def heatmap_helpers(model,target_layers,input_tensor,original_image):
-    # Inizializza Grad-CAM
-    cam = GradCAM(model=model, target_layers=target_layers)
+def heatmap_helpers(cam, model,input_tensor,original_image):
 
     logits = model(input_tensor)
     predicted_class = torch.argmax(logits, dim=1).item()

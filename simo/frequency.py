@@ -9,6 +9,7 @@ import torch.nn as nn
 import torch.optim as optim
 from PIL import Image
 from torchvision import transforms
+from pytorch_grad_cam import GradCAM
 
 import helpers
 
@@ -218,7 +219,7 @@ def xception_feature_extractor(data_loader, path_name):
 #------------------------------------------------HEATMAP---------------------------------------------------
 
 
-def heatmap_handler(path_name):
+def xception_heatmap_handler(path_name):
     if torch.cuda.is_available():
         device = "cuda"
     elif torch.backends.mps.is_available():
@@ -245,6 +246,9 @@ def heatmap_handler(path_name):
     input_tensor_for_wavelet = transform_for_wavelet(original_image).unsqueeze(0).to(device)
     input_tensor_12ch = apply_wavelet(input_tensor_for_wavelet).to(device)
     target_layers = [model.conv4]
-    helpers.heatmap_helpers(model,target_layers,input_tensor_12ch,original_image)
+    #print(model)
+    # Inizializza Grad-CAM
+    cam = GradCAM(model=model, target_layers=target_layers)
+    helpers.heatmap_helpers(cam, model,input_tensor_12ch,original_image)
 
 

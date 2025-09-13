@@ -4,6 +4,9 @@ import torch.nn as nn
 import torch.optim as optim
 from torchvision.models import resnet18, ResNet18_Weights
 from pathlib import Path
+from PIL import Image
+from torchvision import transforms
+from pytorch_grad_cam import GradCAM
 
 
 # --- Training and Evaluation Functions ---
@@ -160,3 +163,37 @@ def resnet_get_features(data_loader, path_name):
             all_features.append(features)
 
     return torch.cat(all_features, dim=0)
+
+def resnet_heatmap_handler (path_name):
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif torch.backends.mps.is_available():
+        device = "mps"
+    else:
+        device = "cpu"
+    print(f"Using device: {device}")
+
+    model = resnet18()
+    num_feature = model.fc.in_features
+    model.fc = nn.Linear(num_feature, 2)
+    weights_path = Path(path_name)
+    if weights_path.exists():
+        model.load_state_dict(torch.load(weights_path, weights_only=True, map_location=device))
+        print("Resnet loaded with saved weights")
+    else:
+        print("Error: Saved weights not found. Please train the model first.")
+        return None
+    model.to(device).eval()
+    image_path = "simo/images/fotopersona.jpeg"
+    original_image = Image.open(image_path).convert("RGB")
+    transform = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor()
+    ])
+    input_tensor = transform(original_image).unsqueeze(0).to(device)
+    #print(model)
+    target_layers = [model.layer4]
+    #Inizializza Grad-CAM
+    cam = GradCAM(model=model, target_layers=target_layers)
+    helpers.heatmap_helpers(cam, model, input_tensor, original_image)
+
