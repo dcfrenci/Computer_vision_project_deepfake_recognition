@@ -207,7 +207,7 @@ def clip_fc_plot_tsne(data_loader, path_name=None):
             inputs = batch['image'].to(device)
             labels = batch['label']
             features = clip_model.encode_image(inputs)
-            logits = model.head(features)
+            logits = model.head(features.float())
 
             all_features.append(logits.cpu())
             all_labels.append(labels.cpu())
@@ -226,6 +226,6 @@ def clip_fc_plot_tsne(data_loader, path_name=None):
     plt.legend()
     plt.xlabel("t-SNE dimension 1")
     plt.ylabel("t-SNE dimension 2")
-    title = "CLIP Features (Pretrained)" if path_name and Path(path_name).exists() else "CLIP Features (Untrained)"
+    title = "CLIP (Pretrained)" if path_name and Path(path_name).exists() else "CLIP (Untrained)"
     plt.title(title)
     plt.show()

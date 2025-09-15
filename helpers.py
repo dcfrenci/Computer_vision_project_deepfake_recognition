@@ -57,3 +57,4 @@ def display_images(cam_image, original_image):
     axes[1].axis('off')
 
     plt.show()
+

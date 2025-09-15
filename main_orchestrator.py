@@ -8,8 +8,8 @@ from simo import frequency
 
 
 def main():
-    training(num_epochs=15)
-    #results()
+    #training(num_epochs=15)
+    results()
     #importancemap_show()
 
 
@@ -74,7 +74,7 @@ def training(num_epochs):
 
 
 def results():
-    test_loader = dataset_handler.dataset_results(num_test_examples=256, batch_size=32)
+    test_loader = dataset_handler.dataset_results(num_test_examples=1024, batch_size=32)
     helpers.print_title("RESULTS")
 
     # Resnet18
@@ -108,6 +108,10 @@ def results():
     ensemble_handler.ensemble_results([out_resnet, out_clip, out_frequency], test_loader_modified)
     test_feature_tr = [test_feature_resnet, test_feature_clip, test_feature_frequency]
     ensemble_handler.ensemble_meta_results(test_feature_tr, test_loader_modified, batch_size=32)
+
+    plot_resnet = resnet_18.resnet_plot_tsne(test_loader, "dc/resnet_18_weight.pth")
+    plot_clip_fc = clip_fc.clip_fc_plot_tsne(test_loader, "matte/fc_layer_weight.pth")
+    plot_frequency = frequency.frequency_plot_tsne(test_loader, "simo/frequency_Xception_weight.pth")
 
     helpers.print_title("END RESULTS")
 

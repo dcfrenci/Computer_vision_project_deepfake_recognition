@@ -7,6 +7,8 @@ from pathlib import Path
 from PIL import Image
 from torchvision import transforms
 from pytorch_grad_cam import GradCAM
+from sklearn.manifold import TSNE
+import matplotlib.pyplot as plt
 
 
 # --- Training and Evaluation Functions ---
@@ -197,3 +199,61 @@ def resnet_heatmap_handler (path_name):
     cam = GradCAM(model=model, target_layers=target_layers)
     helpers.heatmap_helpers(cam, model, input_tensor, original_image)
 
+
+
+
+def resnet_plot_tsne(data_loader, path_name=None):
+    helpers.print_section("RESNET 18 t-SNE")
+
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif torch.backends.mps.is_available():
+        device = "mps"
+    else:
+        device = "cpu"
+    print(f"Using device: {device}")
+
+    model = resnet18()
+    num_feature = model.fc.in_features
+    model.fc = nn.Linear(num_feature, 2)
+    weights_path = Path(path_name)
+    if weights_path.exists():
+        model.load_state_dict(torch.load(weights_path, weights_only=True, map_location=device))
+        model = nn.Sequential(*(list(model.children())[:-1]))
+        print("Resnet loaded with saved weights")
+    else:
+        print("Error: Saved weights not found. Please train the model first.")
+        return None
+
+    model = model.to(device)
+    model.eval()
+
+    all_features, all_labels = [], []
+    with torch.no_grad():
+        for batch in data_loader:
+            inputs = batch['image'].to(device)
+            labels = batch['label']
+            inputs = inputs.to(device)
+            features = model(inputs)
+            features = features.view(features.size(0), -1)
+            all_features.append(features.cpu())
+            all_labels.append(labels.cpu())
+
+
+    X = torch.cat(all_features, dim=0).numpy()
+    y = torch.cat(all_labels, dim=0).numpy()
+
+    tsne = TSNE(n_components=2, random_state=42)
+    X_2d = tsne.fit_transform(X)
+
+
+    # plotting
+    plt.figure(figsize=(7,6))
+    plt.scatter(X_2d[y==0,0], X_2d[y==0,1], c='blue', s=5, label="Real", alpha=0.6)
+    plt.scatter(X_2d[y==1,0], X_2d[y==1,1], c='red', s=5, label="Fake", alpha=0.6)
+    plt.legend()
+    plt.xlabel("t-SNE dimension 1")
+    plt.ylabel("t-SNE dimension 2")
+    title = "RESNET 18 (Pretrained)" if path_name and Path(path_name).exists() else "RESNET 18 (Untrained)"
+    plt.title(title)
+    plt.show()
