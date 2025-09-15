@@ -7,7 +7,8 @@ from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 import helpers
 from pathlib import Path
-from pytorch_grad_cam import EigenCAM
+from sklearn.manifold import TSNE
+import matplotlib.pyplot as plt
 
 
 class DeepfakeClassifier(nn.Module):
@@ -173,7 +174,10 @@ def clip_fc_get_features(data_loader):
 
 
 
-def clip_heatmap_handler(path_name):
+
+def clip_fc_plot_tsne(data_loader, path_name=None):
+    helpers.print_section("CLIP t-SNE")
+
     if torch.cuda.is_available():
         device = "cuda"
     elif torch.backends.mps.is_available():
@@ -182,29 +186,46 @@ def clip_heatmap_handler(path_name):
         device = "cpu"
     print(f"Using device: {device}")
 
+    
     clip_model, preprocess = clip.load("ViT-B/32", device=device)
-
     for param in clip_model.parameters():
         param.requires_grad = False
-
+    
+    
     model = DeepfakeClassifier(clip_model).to(device)
 
-    if Path(path_name).exists():
-        model.head.load_state_dict(torch.load(path_name, weights_only=True, map_location=device))
-        print(f"head layer loaded with pretrained weights")
+    if path_name and Path(path_name).exists():
+        model.head.load_state_dict(torch.load(path_name, map_location=device))
+        print("head layer loaded with pretrained weights")
     else:
-        print(f"head layer loaded without pretrained weights")
-    model.to(device).eval()
-    model.float()
-    image_path = "simo/images/fotopersona.jpeg"
-    original_image = Image.open(image_path).convert("RGB")
+        print("head layer loaded without pretrained weights")
 
-    transform = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor()
-    ])
-    input_tensor = transform(original_image).unsqueeze(0).to(device)
-    target_layers = [model.clip.visual.transformer.resblocks[11]]
-    # Inizializza Grad-CAM
-    cam = EigenCAM(model=model, target_layers=target_layers)
-    helpers.heatmap_helpers(cam,model,input_tensor,original_image)
+    
+    all_features, all_labels = [], []
+    with torch.no_grad():
+        for batch in data_loader:
+            inputs = batch['image'].to(device)
+            labels = batch['label']
+            features = clip_model.encode_image(inputs)
+            logits = model.head(features)
+
+            all_features.append(logits.cpu())
+            all_labels.append(labels.cpu())
+
+    X = torch.cat(all_features, dim=0).numpy()
+    y = torch.cat(all_labels, dim=0).numpy()
+
+    tsne = TSNE(n_components=2, random_state=42)
+    X_2d = tsne.fit_transform(X)
+
+
+    # plotting
+    plt.figure(figsize=(7,6))
+    plt.scatter(X_2d[y==0,0], X_2d[y==0,1], c='blue', s=5, label="Real", alpha=0.6)
+    plt.scatter(X_2d[y==1,0], X_2d[y==1,1], c='red', s=5, label="Fake", alpha=0.6)
+    plt.legend()
+    plt.xlabel("t-SNE dimension 1")
+    plt.ylabel("t-SNE dimension 2")
+    title = "CLIP Features (Pretrained)" if path_name and Path(path_name).exists() else "CLIP Features (Untrained)"
+    plt.title(title)
+    plt.show()
