@@ -1,9 +1,11 @@
 import os
+
 import matplotlib.pyplot as plt
 import numpy as np
-from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
-from pytorch_grad_cam.utils.image import show_cam_on_image
 import torch
+from pytorch_grad_cam.utils.image import show_cam_on_image
+from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
+
 
 def print_section(title, char='-'):
     try:
@@ -23,10 +25,9 @@ def print_title(title, char='-'):
     print(f"{char * half_width} {title} {char * (width - half_width - len(title) - 3)}")
 
 
-#---------------------------------HEATMAP CODE-------------------------------------
+# ---------------------------------HEATMAP CODE-------------------------------------
 
-def heatmap_helpers(cam, model,input_tensor,original_image):
-
+def heatmap_helpers(cam, model, input_tensor, original_image):
     logits = model(input_tensor)
     predicted_class = torch.argmax(logits, dim=1).item()
 
@@ -57,4 +58,3 @@ def display_images(cam_image, original_image):
     axes[1].axis('off')
 
     plt.show()
-

@@ -29,6 +29,8 @@ def random_transform(img):
         return apply_blur(img)
     elif x == 5:
         return apply_contrast_luminosity(img)
+    return None
+
 
 # ---- Dataset che restituisce dict ----
 class DictDataset(Dataset):

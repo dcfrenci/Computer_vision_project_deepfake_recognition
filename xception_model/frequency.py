@@ -238,7 +238,7 @@ def xception_heatmap_handler(path_name):
     model = build_xception_12ch(weight_path)
     model.to(device).eval()
 
-    image_path = "simo/images/fotopersona.jpeg"
+    image_path = "xception_model/images/fotopersona.jpeg"
     original_image = Image.open(image_path).convert("RGB")
 
     transform_for_wavelet = transforms.Compose([

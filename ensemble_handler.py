@@ -89,6 +89,7 @@ def ensemble_results(model_probs_list, data_loader):
           f"Ensemble recall: {recall:.3f}\n"
           f"Ensemble f1: {f1:.3f}\n"
           f"Ensemble log loss: {ensemble_log_loss:.4f}")
+    return None
 
 
 def get_all_labels(data_loader):
@@ -267,3 +268,4 @@ def ensemble_meta_results(test_features, test_loader, batch_size):
           f"Ensemble recall: {recall:.3f}\n"
           f"Ensemble f1: {f1:.3f}\n"
           f"Ensemble log loss: {ensemble_log_loss:.4f}")
+    return None

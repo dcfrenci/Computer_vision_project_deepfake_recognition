@@ -77,7 +77,7 @@ def apply_transformation(dataloader):
 
 if __name__ == "__main__":
     # Carica immagini dalla cartella "images/"
-    image_paths = sorted(glob.glob("simo/images/*.jpg"))  # Ordina i percorsi per coerenza
+    image_paths = sorted(glob.glob("xception_model/images/*.jpg"))  # Ordina i percorsi per coerenza
     images = [read_image(path).float() / 255.0 for path in image_paths]
     labels = torch.arange(len(images))  # etichette fittizie (numeri della lista)
 
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     new_loader = apply_transformation(dataloader)
 
     # Prepara la cartella di output
-    output_dir = "simo/images_trasformed"
+    output_dir = "xception_model/images_trasformed"
     # Questa riga crea la cartella se non esiste, altrimenti non fa nulla
     os.makedirs(output_dir, exist_ok=True)
 

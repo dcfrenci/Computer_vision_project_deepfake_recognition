@@ -1,19 +1,16 @@
-import torch
+from pathlib import Path
+
 import clip
-from PIL import Image
+import matplotlib.pyplot as plt
+import torch
 import torch.nn as nn
 import torch.optim as optim
-from torchvision import datasets, transforms
-from torch.utils.data import DataLoader
-import helpers
-from pathlib import Path
-from pytorch_grad_cam import EigenCAM,GradCAM
+from PIL import Image
+from pytorch_grad_cam import GradCAM
 from sklearn.manifold import TSNE
-import matplotlib.pyplot as plt
-import numpy as np
-from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
-from pytorch_grad_cam.utils.image import show_cam_on_image
+from torchvision import transforms
 
+import helpers
 
 
 class DeepfakeClassifier(nn.Module):
@@ -174,7 +171,7 @@ def clip_fc_get_features(data_loader):
             inputs = inputs.to(device)
             features = clip_model.encode_image(inputs)
             all_features.append(features)
-    
+
     return torch.cat(all_features, dim=0)
 
 
@@ -201,7 +198,7 @@ def clip_heatmap_handler(path_name):
         print(f"head layer loaded without pretrained weights")
     model.to(device).eval()
     model.float()
-    image_path = "simo/images/fotopersona.jpeg"
+    image_path = "xception_model/images/fotopersona.jpeg"
     original_image = Image.open(image_path).convert("RGB")
 
     transform = transforms.Compose([
@@ -214,6 +211,7 @@ def clip_heatmap_handler(path_name):
     # Inizializza Grad-CAM
     cam = GradCAM(model=model, target_layers=target_layers)
     helpers.heatmap_helpers(cam, model, input_tensor, original_image)
+
 
 def clip_fc_plot_tsne(data_loader, path_name=None):
     helpers.print_section("CLIP t-SNE")
@@ -249,16 +247,16 @@ def clip_fc_plot_tsne(data_loader, path_name=None):
             all_features.append(logits.cpu())
             all_labels.append(labels.cpu())
 
-    X = torch.cat(all_features, dim=0).numpy()
+    x = torch.cat(all_features, dim=0).numpy()
     y = torch.cat(all_labels, dim=0).numpy()
 
     tsne = TSNE(n_components=2, random_state=42)
-    X_2d = tsne.fit_transform(X)
+    x_2d = tsne.fit_transform(x)
 
     # plotting
     plt.figure(figsize=(7, 6))
-    plt.scatter(X_2d[y == 0, 0], X_2d[y == 0, 1], c='blue', s=5, label="Real", alpha=0.6)
-    plt.scatter(X_2d[y == 1, 0], X_2d[y == 1, 1], c='red', s=5, label="Fake", alpha=0.6)
+    plt.scatter(x_2d[y == 0, 0], x_2d[y == 0, 1], c='blue', s=5, label="Real", alpha=0.6)
+    plt.scatter(x_2d[y == 1, 0], x_2d[y == 1, 1], c='red', s=5, label="Fake", alpha=0.6)
     plt.legend()
     plt.xlabel("t-SNE dimension 1")
     plt.ylabel("t-SNE dimension 2")
