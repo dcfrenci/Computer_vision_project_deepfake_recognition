@@ -32,7 +32,7 @@ def random_transform(img):
     return None
 
 
-# ---- Dataset che restituisce dict ----
+# Dataset that returns a dictionary.
 class DictDataset(Dataset):
     def __init__(self, images, labels):
         self.images = images
@@ -48,7 +48,6 @@ class DictDataset(Dataset):
         }
 
 
-# ---- Funzione principale ----
 def apply_transformation(dataloader):
     all_images = []
     all_labels = []

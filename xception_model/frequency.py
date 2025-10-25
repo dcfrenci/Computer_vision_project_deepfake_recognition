@@ -16,45 +16,41 @@ import matplotlib.pyplot as plt
 import helpers
 
 
-# =========================
+
 # Wavelet preprocessing
-# =========================
 def apply_wavelet(batch_images):
     batch_wavelet = []
 
-    for img in batch_images:  # img: [3,H,W]
-        img_np = img.permute(1, 2, 0).cpu().numpy().astype(np.float32)  #da [C,H,W] a [H,W,C] server per PyWavelets
+    for img in batch_images:
+        # [C,H,W]-[H,W,C]
+        img_np = img.permute(1, 2, 0).cpu().numpy().astype(np.float32)
         comps = []
 
-        for c in range(3):  # R,G,B
+        for c in range(3):
             cA, (cH, cV, cD) = pywt.dwt2(img_np[:, :, c], "haar")
 
             for comp in [cA, cH, cV, cD]:
                 comp_resized = cv2.resize(comp, (
-                224, 224))  #ogni componente welvet ha dim 1/2 rispetto all'imm originale, li riporto alla dim originale
+                224, 224))
                 comps.append(comp_resized)
-
         # shape: [12,H,W]
-        wavelet_img = np.stack(comps, axis=0)  #unisco tutte le 3x4 immagini in un tensore
+        wavelet_img = np.stack(comps, axis=0)
         wavelet_tensor = torch.from_numpy(wavelet_img).float()
 
-        #Normalizzazione tipo ImageNet (ripetuta per ogni gruppo di 3 canali)
         mean = [0.485, 0.456, 0.406] * 4
         std = [0.229, 0.224, 0.225] * 4
         wavelet_tensor = transforms.Normalize(mean=mean, std=std)(wavelet_tensor)
 
         batch_wavelet.append(wavelet_tensor)
+    return torch.stack(batch_wavelet)
 
-    return torch.stack(batch_wavelet)  # [B,12,224,224]
 
 
-# =========================
-# Xception modificata a 12canali
-# =========================
+# Xception modified to 12 channels
 def build_xception_12ch(weight_path: Path):
     if weight_path.exists():
         model = timm.create_model("legacy_xception", pretrained=False, num_classes = 2)
-        old_conv = model.conv1  #salvo riferimento al layer originale del resnet18 con 3 canali
+        old_conv = model.conv1  #reference to the original layer
         model.conv1 = nn.Conv2d(12, old_conv.out_channels,
                                 kernel_size=old_conv.kernel_size,
                                 stride=old_conv.stride,
@@ -62,9 +58,9 @@ def build_xception_12ch(weight_path: Path):
                                 bias=old_conv.bias)
         state_dict = torch.load(weight_path, map_location="cpu", weights_only=True)
         model.load_state_dict(state_dict, strict=False)
-        print("Xception caricata con pesi salvati")
+        print("Xception loaded with pretrained weights")
     else:
-        # Altrimenti parti dai pesi ImageNet e sostituisce la testa con 2 classi
+        # ImageNet-pretrained weights
         model = timm.create_model("legacy_xception", pretrained=True, num_classes=2)
         old_conv = model.conv1
         model.conv1 = nn.Conv2d(12, old_conv.out_channels,
@@ -72,12 +68,12 @@ def build_xception_12ch(weight_path: Path):
                                 stride=old_conv.stride,
                                 padding=old_conv.padding,
                                 bias=old_conv.bias)
-        with torch.no_grad():  #non calcolare i gradienti per le operazioni dentro il blocco.stiamo modificando i pesi direttamente non stiamo facendo trainig
-            # replica i pesi dei 3 canali sui 12
+        with torch.no_grad():
+            # Replicate 3-channel weights across 12 input channels
             model.conv1.weight[:, :3, :, :] = old_conv.weight
             for i in range(1, 4):
                 model.conv1.weight[:, 3 * i:3 * (i + 1), :, :] = old_conv.weight
-        print("Xception caricata con pesi ImageNet adattati a 12 canali")
+        print("Xception loaded with ImageNet weights adapted to 12 channels")
     return model
 
 
@@ -160,7 +156,6 @@ def frequency_handler(train_loader, test_loader, num_epochs, path_name):
               f"Test Loss: {test_loss:.4f}, "
               f"Acc: {test_accuracy:.2f}%")
 
-    # salva i pesi-
     torch.save(model.state_dict(), weight_path)
     return outputs
 
@@ -188,7 +183,6 @@ def frequency_results(data_loader, path_name):
 
 
 #--------------------------------LAST_LAYER_REMOVED-----------------------------------------------
-
 def xception_feature_extractor(data_loader, path_name):
     helpers.print_section("Xception model feature extractor")
     if torch.cuda.is_available():
@@ -202,7 +196,7 @@ def xception_feature_extractor(data_loader, path_name):
     weight_path = Path(path_name)
     if weight_path.exists():
         model = build_xception_12ch(weight_path)
-        model = nn.Sequential(*(list(model.children())[:-1]))  #il modello sarà costituito da tutta la backbone tranne il classificatore finale
+        model = nn.Sequential(*(list(model.children())[:-1]))
     else:
         print("Error: Saved weights not found. Please train the model first.")
         return None
@@ -212,15 +206,13 @@ def xception_feature_extractor(data_loader, path_name):
     all_features = []
     with torch.no_grad():
         for batch in data_loader:
-            inputs = apply_wavelet(batch['image']).to(device)  # applica wavelet
+            inputs = apply_wavelet(batch['image']).to(device)
             features = model(inputs)
-            features = features.view(features.size(0), -1)  # flatten
+            features = features.view(features.size(0), -1)
             all_features.append(features)
     return torch.cat(all_features, dim=0)
 
 #------------------------------------------------HEATMAP---------------------------------------------------
-
-
 def xception_heatmap_handler(path_name):
     if torch.cuda.is_available():
         device = "cuda"
@@ -249,7 +241,6 @@ def xception_heatmap_handler(path_name):
     input_tensor_12ch = apply_wavelet(input_tensor_for_wavelet).to(device)
     target_layers = [model.conv4]
     #print(model)
-    # Inizializza Grad-CAM
     cam = GradCAM(model=model, target_layers=target_layers)
     helpers.heatmap_helpers(cam, model,input_tensor_12ch,original_image)
 
