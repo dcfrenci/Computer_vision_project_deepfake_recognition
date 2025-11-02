@@ -47,7 +47,7 @@ def ensemble_handler(model_probs_list, test_loader):
     ensemble_accuracy = accuracy_score(labels, final_bin_prev)
     ensemble_log_loss = log_loss(labels, normalized_probs)
 
-    with open(r'ensemble_weights.pkl', 'wb') as file:
+    with open(r'ensemble_model/ensemble_weights.pkl', 'wb') as file:
         # noinspection PyTypeChecker
         pickle.dump(opt_weights, file)
 
@@ -65,7 +65,7 @@ def ensemble_results(model_probs_list, data_loader):
 
     # Load weights
     try:
-        with open('ensemble_weights.pkl', 'rb') as file:
+        with open('ensemble_model/ensemble_weights.pkl', 'rb') as file:
             optimal_weights = pickle.load(file)
     except FileNotFoundError:
         print(f"Error while loading ensemble weight")
@@ -211,7 +211,7 @@ def ensemble_meta_model(train_features, train_loader, test_features, test_loader
     accuracy = accuracy_score(all_labels, all_predictions)
     print(f"Meta model accuracy: {accuracy * 100:.2f}")
 
-    torch.save(meta_model.state_dict(), "meta_model_weights.pth")
+    torch.save(meta_model.state_dict(), "ensemble_model/meta_model_weights.pth")
 
 
 def ensemble_meta_results(test_features, test_loader, batch_size):
@@ -237,7 +237,7 @@ def ensemble_meta_results(test_features, test_loader, batch_size):
         nn.Linear(64, 2)
     ).to(device)
 
-    weights_path = Path("meta_model_weights.pth")
+    weights_path = Path("ensemble_model/meta_model_weights.pth")
     if weights_path.exists():
         model.load_state_dict(torch.load(weights_path, weights_only=True, map_location=device))
         print("Meta model loaded with saved weights")

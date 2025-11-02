@@ -8,7 +8,7 @@ from xception_model import frequency
 
 
 def main():
-    # training(num_epochs=15)
+    training(num_epochs=15)
     results()
     #importance_map_show()
 
@@ -82,7 +82,7 @@ def training(num_epochs):
 
 
 def results():
-    test_loader = dataset_handler.dataset_results(num_test_examples=256, batch_size=32)
+    test_loader = dataset_handler.dataset_results(num_test_examples=64, batch_size=32)
     helpers.print_title("RESULTS")
 
     # Resnet18
