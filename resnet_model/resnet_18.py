@@ -197,9 +197,7 @@ def resnet_heatmap_handler(path_name):
         transforms.ToTensor()
     ])
     input_tensor = transform(original_image).unsqueeze(0).to(device)
-    # print(model)
     target_layers = [model.layer4]
-    # Inizializza Grad-CAM
     cam = GradCAM(model=model, target_layers=target_layers)
     return helpers.heatmap_helpers(cam, model, input_tensor, original_image)
 

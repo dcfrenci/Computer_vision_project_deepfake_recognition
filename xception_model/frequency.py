@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 import pywt
 import timm
@@ -8,13 +9,11 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from PIL import Image
-from torchvision import transforms
 from pytorch_grad_cam import GradCAM
 from sklearn.manifold import TSNE
-import matplotlib.pyplot as plt
+from torchvision import transforms
 
 import helpers
-
 
 
 # Wavelet preprocessing
@@ -31,7 +30,7 @@ def apply_wavelet(batch_images):
 
             for comp in [cA, cH, cV, cD]:
                 comp_resized = cv2.resize(comp, (
-                224, 224))
+                    224, 224))
                 comps.append(comp_resized)
         # shape: [12,H,W]
         wavelet_img = np.stack(comps, axis=0)
@@ -45,12 +44,11 @@ def apply_wavelet(batch_images):
     return torch.stack(batch_wavelet)
 
 
-
 # Xception modified to 12 channels
 def build_xception_12ch(weight_path: Path):
     if weight_path.exists():
-        model = timm.create_model("legacy_xception", pretrained=False, num_classes = 2)
-        old_conv = model.conv1  #reference to the original layer
+        model = timm.create_model("legacy_xception", pretrained=False, num_classes=2)
+        old_conv = model.conv1  # reference to the original layer
         model.conv1 = nn.Conv2d(12, old_conv.out_channels,
                                 kernel_size=old_conv.kernel_size,
                                 stride=old_conv.stride,
@@ -182,7 +180,7 @@ def frequency_results(data_loader, path_name):
     return outputs
 
 
-#--------------------------------LAST_LAYER_REMOVED-----------------------------------------------
+# --------------------------------LAST_LAYER_REMOVED-----------------------------------------------
 def xception_feature_extractor(data_loader, path_name):
     helpers.print_section("Xception model feature extractor")
     if torch.cuda.is_available():
@@ -212,7 +210,8 @@ def xception_feature_extractor(data_loader, path_name):
             all_features.append(features)
     return torch.cat(all_features, dim=0)
 
-#------------------------------------------------HEATMAP---------------------------------------------------
+
+# ------------------------------------------------HEATMAP---------------------------------------------------
 def xception_heatmap_handler(path_name):
     if torch.cuda.is_available():
         device = "cuda"
@@ -240,9 +239,9 @@ def xception_heatmap_handler(path_name):
     input_tensor_for_wavelet = transform_for_wavelet(original_image).unsqueeze(0).to(device)
     input_tensor_12ch = apply_wavelet(input_tensor_for_wavelet).to(device)
     target_layers = [model.conv4]
-    #print(model)
+    # print(model)
     cam = GradCAM(model=model, target_layers=target_layers)
-    helpers.heatmap_helpers(cam, model,input_tensor_12ch,original_image)
+    helpers.heatmap_helpers(cam, model, input_tensor_12ch, original_image)
 
 
 def frequency_plot_tsne(data_loader, path_name=None):
@@ -275,18 +274,16 @@ def frequency_plot_tsne(data_loader, path_name=None):
             all_features.append(features.cpu())
             all_labels.append(labels.cpu())
 
-
     X = torch.cat(all_features, dim=0).numpy()
     y = torch.cat(all_labels, dim=0).numpy()
 
     tsne = TSNE(n_components=2, random_state=42)
     X_2d = tsne.fit_transform(X)
 
-
     # plotting
-    plt.figure(figsize=(7,6))
-    plt.scatter(X_2d[y==0,0], X_2d[y==0,1], c='blue', s=5, label="Real", alpha=0.6)
-    plt.scatter(X_2d[y==1,0], X_2d[y==1,1], c='red', s=5, label="Fake", alpha=0.6)
+    plt.figure(figsize=(7, 6))
+    plt.scatter(X_2d[y == 0, 0], X_2d[y == 0, 1], c='blue', s=5, label="Real", alpha=0.6)
+    plt.scatter(X_2d[y == 1, 0], X_2d[y == 1, 1], c='red', s=5, label="Fake", alpha=0.6)
     plt.legend()
     plt.xlabel("t-SNE dimension 1")
     plt.ylabel("t-SNE dimension 2")

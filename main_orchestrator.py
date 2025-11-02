@@ -1,5 +1,5 @@
 import dataset_handler
-import ensemble_handler
+from ensemble_model import ensemble_handler
 import helpers
 import trasformations
 from resnet_model import resnet_18
@@ -10,7 +10,7 @@ from xception_model import frequency
 def main():
     # training(num_epochs=15)
     results()
-    #importancemap_show()
+    #importance_map_show()
 
 
 def training(num_epochs):
@@ -121,7 +121,7 @@ def results():
 
     helpers.print_title("END RESULTS")
 
-def importancemap_show():
+def importance_map_show():
     frequency.xception_heatmap_handler("xception_model/frequency_Xception_weight.pth")
     clip_fc.clip_heatmap_handler("clip_model/fc_layer_weight.pth")
     resnet_18.resnet_heatmap_handler("resnet_model/resnet_18_weight.pth")
